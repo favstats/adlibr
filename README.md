@@ -60,35 +60,50 @@ li_auth()
 ### 2. Basic Usage
 
 ``` r
-# Search for ads by keyword
+# Simple keyword search
 marketing_ads <- li_query(
-  keyword = "digital marketing",
-  countries = c("us", "ca"),
-  start_date = "2024-01-01",
-  end_date = "2024-03-31"
+  keyword = "marketing",
+  max_pages = 1
 )
+```
 
-# Search for ads by advertiser
-google_ads <- li_query(
-  advertiser = "Google",
+The most basic search uses just a keyword. This returns raw data with
+list-columns for detailed analysis:
+
+``` r
+print(paste("Found", nrow(marketing_ads), "ads"))
+print("Column names:")
+print(names(marketing_ads))
+```
+
+### Searching by Country
+
+For more targeted results, search within specific countries:
+
+``` r
+us_ads <- li_query(
   countries = c("us"),
-  max_pages = 5
+  max_pages = 2,
+  count = 10
 )
+```
 
-# Search for recent ads in specific countries
-recent_ads <- li_query(
-  countries = c("gb", "de", "fr"),
-  start_date = "2024-06-01",
-  end_date = "2024-06-30"
-)
+### Using Clean Data Format
 
-# Get cleaned data without list-columns (easier to work with)
+The `clean = TRUE` parameter removes list-columns for easier analysis:
+
+``` r
+# Get cleaned data without complex list-columns
 clean_ads <- li_query(
-  keyword = "artificial intelligence",
   countries = c("us"),
   clean = TRUE,
-  direction = "wide"
+  direction = "wide",
+  max_pages = 1,
+  count = 5
 )
+
+print("Clean data columns:")
+print(names(clean_ads))
 ```
 
 ## API Parameters
@@ -143,81 +158,133 @@ tech_ads <- li_query(
 print(paste("Found", nrow(tech_ads), "AI/ML ads"))
 ```
 
-### Analyze Targeting Data
+### Analyzing Targeting Data
+
+LinkedIn ads include targeting information showing how advertisers
+segment their audience:
 
 ``` r
-# Extract and analyze targeting information
-targeting_data <- google_ads |>
-  tidyr::unnest(ad_targeting) |>
-  dplyr::filter(!is.na(facetName))
-
-# Most common targeting criteria
-targeting_summary <- targeting_data |>
-  dplyr::count(facetName, sort = TRUE)
-
-print(targeting_summary)
+# Get ads with targeting data
+ads_with_targeting <- li_query(
+  countries = c("us"),
+  max_pages = 2,
+  count = 10
+)
 ```
 
-### Country-wise Impression Analysis
+Extract and analyze the targeting information:
 
 ``` r
-# Analyze impression distribution by country
-impression_data <- google_ads |>
+library(dplyr)
+library(tidyr)
+
+# Unnest targeting data for analysis
+targeting_data <- ads_with_targeting |>
+  tidyr::unnest(ad_targeting) |>
+  dplyr::filter(!is.na(facet_name))
+
+print(paste("Found targeting data for", nrow(targeting_data), "targeting criteria"))
+```
+
+Summarize the most common targeting approaches:
+
+``` r
+if (nrow(targeting_data) > 0) {
+  targeting_summary <- targeting_data |>
+    dplyr::count(facet_name, sort = TRUE)
+  
+  print("Most common targeting criteria:")
+  print(targeting_summary)
+} else {
+  print("No targeting data found for this query")
+}
+```
+
+### Geographic Impression Analysis
+
+When available, impression data shows how ads perform across different
+countries:
+
+``` r
+# Look for geographic impression data
+impression_data <- ads_with_targeting |>
   tidyr::unnest(impressions_by_country) |>
   dplyr::filter(!is.na(country))
 
-# Top countries by impression percentage
-country_summary <- impression_data |>
-  dplyr::group_by(country) |>
-  dplyr::summarise(
-    avg_impression_pct = mean(impression_percentage, na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  dplyr::arrange(desc(avg_impression_pct))
-
-print(country_summary)
+print(paste("Found impression data for", nrow(impression_data), "country distributions"))
 ```
 
-### Using Clean Data Format
+Analyze the geographic distribution:
 
 ``` r
-# Get data in clean format (no list-columns)
+if (nrow(impression_data) > 0) {
+  country_summary <- impression_data |>
+    dplyr::group_by(country) |>
+    dplyr::summarise(
+      avg_impression_pct = mean(impression_percentage, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    dplyr::arrange(desc(avg_impression_pct))
+  
+  print("Top countries by impression percentage:")
+  print(country_summary)
+} else {
+  print("No geographic impression data found for this query")
+}
+```
+
+### Clean Data Format Options
+
+The `clean = TRUE` parameter simplifies the data structure for easier
+analysis:
+
+``` r
+# Wide format: countries become separate columns, targeting flattened
 clean_wide <- li_query(
-  keyword = "machine learning",
   countries = c("us"),
   clean = TRUE,
   direction = "wide",
-  max_pages = 1
+  max_pages = 1,
+  count = 5
 )
 
-# Wide format: targeting data as separate columns
 print("Clean wide format columns:")
 print(names(clean_wide))
+print(paste("Dimensions:", nrow(clean_wide), "x", ncol(clean_wide)))
+```
 
-# Long format: all targeting/impression data stacked
+Notice the key improvements in wide format: - `impressions_mid`:
+Calculated midpoint of impression ranges - `targeting_facets`: Summary
+of targeting approaches - Country columns (when data available):
+`impression_pct_US`, `impression_pct_CA`, etc.
+
+``` r
+# Long format: all targeting/impression data stacked with type indicators
 clean_long <- li_query(
-  keyword = "machine learning", 
   countries = c("us"),
   clean = TRUE,
   direction = "long",
-  max_pages = 1
+  max_pages = 1,
+  count = 5
 )
 
 print("Clean long format columns:")
 print(names(clean_long))
+print(paste("Dimensions:", nrow(clean_long), "x", ncol(clean_long)))
+```
 
-# Long format makes it easy to analyze all targeting data
+Long format makes comparative analysis easy:
+
+``` r
 if (nrow(clean_long) > 0 && "data_type" %in% names(clean_long)) {
-  targeting_analysis <- clean_long |>
-    dplyr::filter(data_type == "targeting", !is.na(category)) |>
-    dplyr::count(category, value, sort = TRUE)
+  # Count different types of data available
+  data_summary <- clean_long |>
+    dplyr::count(data_type, sort = TRUE)
   
-  if (nrow(targeting_analysis) > 0) {
-    print("Most common targeting values:")
-    print(head(targeting_analysis))
-  } else {
-    print("No targeting data available for this query")
-  }
+  print("Data types found:")
+  print(data_summary)
+} else {
+  print("No extended data available for this query")
 }
 ```
 

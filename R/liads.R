@@ -160,7 +160,7 @@ build_daterange_param <- function(start_date, end_date) {
 #' @importFrom usethis ui_done ui_oops ui_info
 #' @importFrom lubridate as_date day month year
 #' @importFrom urltools url_encode
-#' @importFrom tidyr unnest
+#' @importFrom tidyr unnest pivot_wider
 #'
 #' @examples
 #' \dontrun{
@@ -316,7 +316,7 @@ li_query <- function(keyword = NULL,
       break
     }
 
-    if (verbose) usethis::ui_done("Retrieved {length(elements)} ads.")
+    if (verbose) usethis::ui_done("Retrieved {length(elements)} ads.\n")
 
     # Process and flatten the response
     page_data <- purrr::map_df(elements, function(el) {
@@ -450,6 +450,16 @@ clean_liads_data <- function(data, direction = "wide") {
   
   base_data <- data[, base_cols]
   
+  # Calculate impression midpoint for cleaner analysis
+  base_data <- base_data |>
+    dplyr::mutate(
+      impressions_mid = dplyr::case_when(
+        !is.na(total_impressions_from) & !is.na(total_impressions_to) ~ 
+          (total_impressions_from + total_impressions_to) / 2,
+        TRUE ~ NA_real_
+      )
+    )
+  
   # Unnest targeting data
   targeting_data <- tryCatch({
     data |>
@@ -484,29 +494,40 @@ clean_liads_data <- function(data, direction = "wide") {
   })
   
   if (direction == "wide") {
-    # Wide format: create separate targeting and impression datasets
-    # Join base data with targeting data
+    # Wide format: pivot countries into separate columns for truly wide data
+    result_final <- base_data
+    
+    # Add targeting summary columns (flattened)
     if (nrow(targeting_data) > 0) {
-      # Flatten included_segments and excluded_segments into text
-      targeting_clean <- targeting_data |>
-        dplyr::mutate(
-          included_segments_text = purrr::map_chr(included_segments, ~ paste(.x, collapse = ", ")),
-          excluded_segments_text = purrr::map_chr(excluded_segments, ~ paste(.x, collapse = ", "))
-        ) |>
-        dplyr::select(-included_segments, -excluded_segments)
+      targeting_summary <- targeting_data |>
+        dplyr::group_by(ad_url) |>
+        dplyr::summarise(
+          targeting_facets = paste(unique(facet_name), collapse = "; "),
+          targeting_segments = paste(purrr::map_chr(included_segments, ~ paste(.x, collapse = ", ")), collapse = "; "),
+          .groups = "drop"
+        )
       
-      result_targeting <- base_data |>
-        dplyr::left_join(targeting_clean, by = "ad_url")
-    } else {
-      result_targeting <- base_data
+      result_final <- result_final |>
+        dplyr::left_join(targeting_summary, by = "ad_url")
     }
     
-    # Join with impression data
+    # Pivot impression data into wide format with countries as columns
     if (nrow(impression_data) > 0) {
-      result_final <- result_targeting |>
-        dplyr::left_join(impression_data, by = "ad_url")
-    } else {
-      result_final <- result_targeting
+      # Extract country codes from URNs for cleaner column names
+      impression_wide <- impression_data |>
+        dplyr::mutate(
+          country_code = gsub("urn:li:country:", "", country)
+        ) |>
+        dplyr::select(ad_url, country_code, impression_percentage) |>
+        tidyr::pivot_wider(
+          names_from = country_code,
+          values_from = impression_percentage,
+          names_prefix = "impression_pct_",
+          values_fill = NA_real_
+        )
+      
+      result_final <- result_final |>
+        dplyr::left_join(impression_wide, by = "ad_url")
     }
     
     return(result_final)
