@@ -302,38 +302,62 @@ li_query <- function(keyword = NULL,
 
     # Process and flatten the response
     page_data <- purrr::map_df(elements, function(el) {
-      # Safely handle impressions by country data
+      # Safely handle impressions by country data (using correct field names)
       impressions_data <- tryCatch({
         if (!is.null(el$details$adStatistics$impressionsDistributionByCountry) && 
             length(el$details$adStatistics$impressionsDistributionByCountry) > 0) {
-          tibble::as_tibble(el$details$adStatistics$impressionsDistributionByCountry)
+          # Convert the list to a proper tibble with snake_case column names
+          impression_list <- el$details$adStatistics$impressionsDistributionByCountry
+          purrr::map_df(impression_list, ~ {
+            tibble::tibble(
+              country = .x$country %||% NA_character_,
+              impression_percentage = .x$impressionPercentage %||% NA_real_
+            )
+          })
         } else {
-          tibble::tibble()
+          tibble::tibble(
+            country = character(0),
+            impression_percentage = numeric(0)
+          )
         }
-      }, error = function(e) tibble::tibble())
+      }, error = function(e) {
+        tibble::tibble(
+          country = character(0),
+          impression_percentage = numeric(0)
+        )
+      })
       
-      # Safely handle ad targeting data
+      # Safely handle ad targeting data (using correct field names)
       targeting_data <- tryCatch({
         if (!is.null(el$details$adTargeting) && length(el$details$adTargeting) > 0) {
-          # Convert list to tibble with proper column names
-          if (is.list(el$details$adTargeting) && !is.data.frame(el$details$adTargeting)) {
-            # Handle case where adTargeting is a list of objects
-            purrr::map_df(el$details$adTargeting, ~ {
-              tibble::tibble(
-                facetName = .x$facetName %||% NA_character_,
-                isInclusive = .x$isInclusive %||% NA,
-                inclusiveSegments = list(.x$inclusiveSegments %||% character(0)),
-                isExclusive = .x$isExclusive %||% NA,
-                exclusiveSegments = list(.x$exclusiveSegments %||% character(0))
-              )
-            })
-          } else {
-            tibble::as_tibble(el$details$adTargeting)
-          }
+          # Convert list to tibble with proper column names (snake_case)
+          purrr::map_df(el$details$adTargeting, ~ {
+            tibble::tibble(
+              facet_name = .x$facetName %||% NA_character_,
+              is_included = .x$isIncluded %||% NA,
+              included_segments = list(.x$includedSegments %||% character(0)),
+              is_excluded = .x$isExcluded %||% NA,
+              excluded_segments = list(.x$excludedSegments %||% character(0))
+            )
+          })
         } else {
-          tibble::tibble()
+          tibble::tibble(
+            facet_name = character(0),
+            is_included = logical(0),
+            included_segments = list(),
+            is_excluded = logical(0),
+            excluded_segments = list()
+          )
         }
-      }, error = function(e) tibble::tibble())
+      }, error = function(e) {
+        tibble::tibble(
+          facet_name = character(0),
+          is_included = logical(0),
+          included_segments = list(),
+          is_excluded = logical(0),
+          excluded_segments = list()
+        )
+      })
       
       tibble::tibble(
         ad_url = el$adUrl %||% NA_character_,
@@ -341,7 +365,7 @@ li_query <- function(keyword = NULL,
         restriction_details = el$restrictionDetails %||% NA_character_,
         advertiser_name = el$details$advertiser$advertiserName %||% NA_character_,
         advertiser_url = el$details$advertiser$advertiserUrl %||% NA_character_,
-        ad_payer = el$details$advertiser$adPayer %||% NA_character_,
+        ad_payer = el$details$advertiser$adPayer %||% NA_character_,  # May not exist in real responses
         ad_type = el$details$type %||% NA_character_,
         first_impression_at = if (!is.null(el$details$adStatistics$firstImpressionAt)) {
           .POSIXct(el$details$adStatistics$firstImpressionAt / 1000, tz = "UTC")

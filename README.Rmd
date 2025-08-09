@@ -137,7 +137,7 @@ print(paste("Found", nrow(tech_ads), "AI/ML ads"))
 
 ```{r targeting-analysis}
 # Extract and analyze targeting information
-targeting_data <- tech_ads |>
+targeting_data <- google_ads |>
   tidyr::unnest(ad_targeting) |>
   dplyr::filter(!is.na(facetName))
 
@@ -152,7 +152,7 @@ print(targeting_summary)
 
 ```{r impression-analysis}
 # Analyze impression distribution by country
-impression_data <- tech_ads |>
+impression_data <- google_ads |>
   tidyr::unnest(impressions_by_country) |>
   dplyr::filter(!is.na(country))
 
@@ -168,26 +168,6 @@ country_summary <- impression_data |>
 print(country_summary)
 ```
 
-## Error Handling
-
-The package includes robust error handling:
-
-```{r error-handling}
-# Handles authentication errors
-tryCatch({
-  ads <- li_query(keyword = "test")
-}, error = function(e) {
-  message("Authentication required: ", e$message)
-})
-
-# Handles API errors gracefully
-ads_with_errors <- li_query(
-  keyword = "nonexistent search term",
-  countries = c("xx"),  # Invalid country code
-  verbose = TRUE
-)
-# Returns empty data frame instead of crashing
-```
 
 ## Rate Limits and Best Practices
 
