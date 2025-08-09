@@ -81,6 +81,14 @@ recent_ads <- li_query(
   start_date = "2024-06-01",
   end_date = "2024-06-30"
 )
+
+# Get cleaned data without list-columns (easier to work with)
+clean_ads <- li_query(
+  keyword = "artificial intelligence",
+  countries = c("us"),
+  clean = TRUE,
+  direction = "wide"
+)
 ```
 
 ## API Parameters
@@ -97,6 +105,8 @@ Library API](https://www.linkedin.com/ad-library/api/ads):
 | `end_date` | Date/String | End date (exclusive) | `"2024-12-31"` |
 | `count` | Integer | Results per page (max 25) | `25` |
 | `max_pages` | Integer | Maximum pages to retrieve | `10` |
+| `clean` | Logical | Return simplified data without list-columns | `TRUE` |
+| `direction` | String | When clean=TRUE: “wide” or “long” format | `"wide"` |
 
 ## Data Structure
 
@@ -137,7 +147,7 @@ print(paste("Found", nrow(tech_ads), "AI/ML ads"))
 
 ``` r
 # Extract and analyze targeting information
-targeting_data <- tech_ads |>
+targeting_data <- google_ads |>
   tidyr::unnest(ad_targeting) |>
   dplyr::filter(!is.na(facetName))
 
@@ -152,7 +162,7 @@ print(targeting_summary)
 
 ``` r
 # Analyze impression distribution by country
-impression_data <- tech_ads |>
+impression_data <- google_ads |>
   tidyr::unnest(impressions_by_country) |>
   dplyr::filter(!is.na(country))
 
@@ -160,7 +170,7 @@ impression_data <- tech_ads |>
 country_summary <- impression_data |>
   dplyr::group_by(country) |>
   dplyr::summarise(
-    avg_impression_pct = mean(impressions, na.rm = TRUE),
+    avg_impression_pct = mean(impression_percentage, na.rm = TRUE),
     .groups = "drop"
   ) |>
   dplyr::arrange(desc(avg_impression_pct))
@@ -168,26 +178,56 @@ country_summary <- impression_data |>
 print(country_summary)
 ```
 
-## Error Handling
-
-The package includes robust error handling:
+### Using Clean Data Format
 
 ``` r
-# Handles authentication errors
-tryCatch({
-  ads <- li_query(keyword = "test")
-}, error = function(e) {
-  message("Authentication required: ", e$message)
-})
-
-# Handles API errors gracefully
-ads_with_errors <- li_query(
-  keyword = "nonexistent search term",
-  countries = c("xx"),  # Invalid country code
-  verbose = TRUE
+# Get data in clean format (no list-columns)
+clean_wide <- li_query(
+  keyword = "machine learning",
+  countries = c("us"),
+  clean = TRUE,
+  direction = "wide",
+  max_pages = 1
 )
-# Returns empty data frame instead of crashing
+
+# Wide format: targeting data as separate columns
+print("Clean wide format columns:")
+print(names(clean_wide))
+
+# Long format: all targeting/impression data stacked
+clean_long <- li_query(
+  keyword = "machine learning", 
+  countries = c("us"),
+  clean = TRUE,
+  direction = "long",
+  max_pages = 1
+)
+
+print("Clean long format columns:")
+print(names(clean_long))
+
+# Long format makes it easy to analyze all targeting data
+if (nrow(clean_long) > 0 && "data_type" %in% names(clean_long)) {
+  targeting_analysis <- clean_long |>
+    dplyr::filter(data_type == "targeting", !is.na(category)) |>
+    dplyr::count(category, value, sort = TRUE)
+  
+  if (nrow(targeting_analysis) > 0) {
+    print("Most common targeting values:")
+    print(head(targeting_analysis))
+  } else {
+    print("No targeting data available for this query")
+  }
+}
 ```
+
+## Data Format Options
+
+| Format | Description | Use Case |
+|----|----|----|
+| **Raw** (`clean = FALSE`) | List-columns preserved | Advanced analysis, full data access |
+| **Clean Wide** (`clean = TRUE, direction = "wide"`) | Targeting/impression data as separate columns | Simple analysis, CSV export |
+| **Clean Long** (`clean = TRUE, direction = "long"`) | Targeting/impression data stacked with type indicators | Comparative analysis across ad types |
 
 ## Rate Limits and Best Practices
 
