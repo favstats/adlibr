@@ -10,28 +10,18 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.path = "man/figures/README-",
   out.width = "100%",
-  eval = FALSE
+  eval = T
 )
 ```
 
 # liads
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/favstats/liads/workflows/R-CMD-check/badge.svg)](https://github.com/favstats/liads/actions)
 [![CRAN status](https://www.r-pkg.org/badges/version/liads)](https://CRAN.R-project.org/package=liads)
 [![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
 <!-- badges: end -->
 
 **liads** is a comprehensive R client for the [LinkedIn Ad Library API](https://www.linkedin.com/ad-library/api/ads). It provides tools for OAuth 2.0 authentication, querying ads by various criteria, automatic pagination, and robust data processing.
-
-## Features
-
-- **🔐 OAuth 2.0 Authentication**: Complete 3-legged authentication workflow
-- **🔍 Comprehensive Search**: Query by keyword, advertiser, country, and date range
-- **📊 Automatic Pagination**: Handles large result sets automatically
-- **🛡️ Robust Error Handling**: Graceful handling of API errors and edge cases
-- **📈 Rich Data Structure**: Returns structured data with targeting and impression data
-- **✅ Full API Coverage**: Supports all parameters from the official LinkedIn API
 
 ## Installation
 
@@ -48,7 +38,7 @@ devtools::install_github("favstats/liads")
 
 First, set up your LinkedIn Developer App credentials (one-time setup):
 
-```{r setup}
+```{r setup, eval = F}
 library(liads)
 
 # Configure your LinkedIn app credentials
@@ -57,6 +47,14 @@ li_auth_configure()  # You'll be prompted to enter Client ID and Secret
 # Authenticate (opens browser for OAuth)
 li_auth()
 ```
+
+```{r, eval = T, include = FALSE}
+devtools::load_all()
+library(dplyr)
+library(tidyr)
+
+```
+
 
 ### 2. Basic Usage
 
@@ -71,9 +69,7 @@ marketing_ads <- li_query(
 The most basic search uses just a keyword. This returns raw data with list-columns for detailed analysis:
 
 ```{r basic-results}
-print(paste("Found", nrow(marketing_ads), "ads"))
-print("Column names:")
-print(names(marketing_ads))
+marketing_ads
 ```
 
 ### Searching by Country
@@ -86,29 +82,22 @@ us_ads <- li_query(
   max_pages = 2,
   count = 10
 )
+
+us_ads
 ```
 
-### Using Clean Data Format
+## How Search Works
 
-The `clean = TRUE` parameter removes list-columns for easier analysis:
+**Important**: LinkedIn's Ad Library searches are based on the [official API documentation](https://www.linkedin.com/ad-library/api/ads):
 
-```{r clean-intro}
-# Get cleaned data without complex list-columns
-clean_ads <- li_query(
-  countries = c("us"),
-  clean = TRUE,
-  direction = "wide",
-  max_pages = 1,
-  count = 5
-)
-
-print("Clean data columns:")
-print(names(clean_ads))
-```
+- **Keywords**: Multiple keywords use **AND logic** - ALL keywords must appear in the ad content
+- **Countries**: Only shows ads that were actually served in those countries  
+- **Dates**: Filters by when ads were served (not when they were created)
+- **Advertiser**: Searches company names that paid for the ads
 
 ## API Parameters
 
-The `li_query()` function supports all parameters from the [LinkedIn Ad Library API](https://www.linkedin.com/ad-library/api/ads):
+The `li_query()` function supports all parameters from the LinkedIn Ad Library API:
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
@@ -127,9 +116,6 @@ The `li_query()` function supports all parameters from the [LinkedIn Ad Library 
 The function returns a tibble with the following columns:
 
 ```{r data-structure}
-# View the structure of returned data
-str(marketing_ads)
-
 # Key columns include:
 # - ad_url: Direct link to ad preview
 # - advertiser_name: Name of the advertiser
@@ -142,93 +128,114 @@ str(marketing_ads)
 
 ## Advanced Examples
 
-### Search with Multiple Criteria
+### How LinkedIn Ad Search Works
 
-```{r advanced-search}
-# Complex search combining multiple parameters
+LinkedIn's Ad Library API searches through ad content using specific rules:
+
+**Keyword Search**: When you provide multiple keywords, they are treated with **logical AND operation**. This means ALL keywords must appear in the ad content.
+
+```{r search-explanation}
+# This searches for ads containing BOTH "artificial" AND "intelligence" AND "machine" AND "learning"
 tech_ads <- li_query(
   keyword = "artificial intelligence machine learning",
-  countries = c("us", "gb", "de", "fr"),
-  start_date = "2024-01-01",
-  end_date = "2024-06-30",
-  max_pages = 10
+  countries = c("us", "gb"),
+  start_date = "2025-01-01", 
+  end_date = "2025-01-31",
+  max_pages = 2
 )
 
-print(paste("Found", nrow(tech_ads), "AI/ML ads"))
+tech_ads
+```
+
+**Advertiser Search**: You can also search by the company/organization that paid for the ads:
+
+```{r advertiser-search}
+# Find all ads paid for by companies with "Microsoft" in their name
+microsoft_ads <- li_query(
+  advertiser = "Microsoft",
+  countries = c("us"),
+  max_pages = 1,
+  count = 10
+)
+
+microsoft_ads
 ```
 
 ### Analyzing Targeting Data
 
-LinkedIn ads include targeting information showing how advertisers segment their audience:
-
-```{r targeting-setup}
-# Get ads with targeting data
-ads_with_targeting <- li_query(
-  countries = c("us"),
-  max_pages = 2,
-  count = 10
-)
-```
-
-Extract and analyze the targeting information:
+LinkedIn ads include targeting information, but **interpretation requires caution**. The API shows what segments advertisers *claim* to target, but doesn't reveal much **targeting precision**. Does "Education" mean university graduates or current students? What is meant by "Job"? What job? This information should really be included but alas it is not.
 
 ```{r targeting-analysis}
-library(dplyr)
-library(tidyr)
 
 # Unnest targeting data for analysis
-targeting_data <- ads_with_targeting |>
+targeting_data <- tech_ads |>
   tidyr::unnest(ad_targeting) |>
   dplyr::filter(!is.na(facet_name))
 
 print(paste("Found targeting data for", nrow(targeting_data), "targeting criteria"))
+
+# Show the top targeting categories
+top_targeting <- targeting_data %>% 
+  count(facet_name, sort = TRUE)
+
+print("Most common targeting approaches:")
+head(top_targeting, 5)
 ```
 
-Summarize the most common targeting approaches:
-
-```{r targeting-summary}
-if (nrow(targeting_data) > 0) {
-  targeting_summary <- targeting_data |>
-    dplyr::count(facet_name, sort = TRUE)
-  
-  print("Most common targeting criteria:")
-  print(targeting_summary)
-} else {
-  print("No targeting data found for this query")
-}
-```
 
 ### Geographic Impression Analysis
 
-When available, impression data shows how ads perform across different countries:
-
-```{r impression-analysis}
+```{r impression-analysis2}
 # Look for geographic impression data
-impression_data <- ads_with_targeting |>
+impression_data <- tech_ads |>
   tidyr::unnest(impressions_by_country) |>
   dplyr::filter(!is.na(country))
 
-print(paste("Found impression data for", nrow(impression_data), "country distributions"))
-```
 
-Analyze the geographic distribution:
-
-```{r impression-summary}
-if (nrow(impression_data) > 0) {
-  country_summary <- impression_data |>
-    dplyr::group_by(country) |>
-    dplyr::summarise(
-      avg_impression_pct = mean(impression_percentage, na.rm = TRUE),
-      .groups = "drop"
-    ) |>
-    dplyr::arrange(desc(avg_impression_pct))
+# Visualize top countries only (limit to avoid clutter)
+library(ggplot2)
   
-  print("Top countries by impression percentage:")
-  print(country_summary)
-} else {
-  print("No geographic impression data found for this query")
-}
+# Get top 5 countries by total impression volume
+top_countries <- impression_data %>% 
+  mutate(impression_per_country = total_impressions_to * (impression_percentage/100)) %>% 
+  group_by(country) %>% 
+  summarise(
+    total_ads = n(),
+    sum_impressions = sum(impression_per_country, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(sum_impressions)) %>%
+  slice_head(n = 5)
+
+print("Top 5 countries by number of ads:")
+print(top_countries)
 ```
+
+
+```{r impression-analysis}
+# Visualize impression distribution for top countries only
+impression_data %>%
+  filter(country %in% top_countries$country) %>%
+  group_by(country) %>%
+  mutate(impression_per_country = total_impressions_to * (impression_percentage / 100)) %>%
+  group_by(country) %>%
+  summarise(
+    total_ads = n(),
+    sum_impressions = sum(impression_per_country, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = country, y = sum_impressions)) +
+  geom_col() +
+  labs(
+    title = "Impression Percentage Distribution by Country",
+    subtitle = "Top 5 countries by ad volume",
+    x = "Country",
+    y = "Impression Percentage"
+  ) +
+  theme_minimal()
+```
+
+
 
 ### Clean Data Format Options
 
@@ -238,15 +245,15 @@ The `clean = TRUE` parameter simplifies the data structure for easier analysis:
 # Wide format: countries become separate columns, targeting flattened
 clean_wide <- li_query(
   countries = c("us"),
+  start_date = "2025-01-01", 
+  end_date = "2025-01-31",
   clean = TRUE,
   direction = "wide",
   max_pages = 1,
   count = 5
 )
 
-print("Clean wide format columns:")
-print(names(clean_wide))
-print(paste("Dimensions:", nrow(clean_wide), "x", ncol(clean_wide)))
+clean_wide
 ```
 
 Notice the key improvements in wide format:
@@ -257,32 +264,18 @@ Notice the key improvements in wide format:
 ```{r clean-long-demo}
 # Long format: all targeting/impression data stacked with type indicators
 clean_long <- li_query(
-  countries = c("us"),
+  countries = c("fr"),
+  start_date = "2025-01-01", 
+  end_date = "2025-01-31",
   clean = TRUE,
   direction = "long",
   max_pages = 1,
   count = 5
 )
 
-print("Clean long format columns:")
-print(names(clean_long))
-print(paste("Dimensions:", nrow(clean_long), "x", ncol(clean_long)))
+clean_long
 ```
 
-Long format makes comparative analysis easy:
-
-```{r clean-long-analysis}
-if (nrow(clean_long) > 0 && "data_type" %in% names(clean_long)) {
-  # Count different types of data available
-  data_summary <- clean_long |>
-    dplyr::count(data_type, sort = TRUE)
-  
-  print("Data types found:")
-  print(data_summary)
-} else {
-  print("No extended data available for this query")
-}
-```
 
 ## Data Format Options
 

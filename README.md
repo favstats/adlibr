@@ -5,7 +5,6 @@
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/favstats/liads/workflows/R-CMD-check/badge.svg)](https://github.com/favstats/liads/actions)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/liads)](https://CRAN.R-project.org/package=liads)
 [![Lifecycle:
@@ -16,20 +15,6 @@ stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://
 API](https://www.linkedin.com/ad-library/api/ads). It provides tools for
 OAuth 2.0 authentication, querying ads by various criteria, automatic
 pagination, and robust data processing.
-
-## Features
-
-- **🔐 OAuth 2.0 Authentication**: Complete 3-legged authentication
-  workflow
-- **🔍 Comprehensive Search**: Query by keyword, advertiser, country,
-  and date range
-- **📊 Automatic Pagination**: Handles large result sets automatically
-- **🛡️ Robust Error Handling**: Graceful handling of API errors and edge
-  cases
-- **📈 Rich Data Structure**: Returns structured data with targeting and
-  impression data
-- **✅ Full API Coverage**: Supports all parameters from the official
-  LinkedIn API
 
 ## Installation
 
@@ -65,15 +50,35 @@ marketing_ads <- li_query(
   keyword = "marketing",
   max_pages = 1
 )
+#> ℹ Retrieving page 1 (starting at index 0)...
+#> ✔ Retrieved 25 ads.
+#> ✔ Reached `max_pages` limit.
+#> ✔ Total ads retrieved: 25
 ```
 
 The most basic search uses just a keyword. This returns raw data with
 list-columns for detailed analysis:
 
 ``` r
-print(paste("Found", nrow(marketing_ads), "ads"))
-print("Column names:")
-print(names(marketing_ads))
+marketing_ads
+#> # A tibble: 25 × 13
+#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
+#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
+#>  1 https://www… FALSE         <NA>                LinearB         https://www.l…
+#>  2 https://www… FALSE         <NA>                Julie Yingst    https://www.l…
+#>  3 https://www… FALSE         <NA>                LinearB         https://www.l…
+#>  4 https://www… FALSE         <NA>                FORM Digital    https://www.l…
+#>  5 https://www… FALSE         <NA>                FinListics Sol… https://www.l…
+#>  6 https://www… FALSE         <NA>                Salesforce      https://www.l…
+#>  7 https://www… FALSE         <NA>                HENNGE (North … https://www.l…
+#>  8 https://www… FALSE         <NA>                LinearB         https://www.l…
+#>  9 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
+#> 10 https://www… FALSE         <NA>                Aeqium          https://www.l…
+#> # ℹ 15 more rows
+#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>,
+#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
+#> #   total_impressions_from <int>, total_impressions_to <int>,
+#> #   impressions_by_country <list>, ad_targeting <list>
 ```
 
 ### Searching by Country
@@ -86,30 +91,60 @@ us_ads <- li_query(
   max_pages = 2,
   count = 10
 )
+#> ℹ Retrieving page 1 (starting at index 0)...
+#> ✔ Retrieved 10 ads.
+#> ℹ Retrieving page 2 (starting at index 10)...
+#> ✔ Retrieved 10 ads.
+#> ✔ Reached `max_pages` limit.
+#> ✔ Total ads retrieved: 20
+
+us_ads
+#> # A tibble: 20 × 13
+#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
+#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
+#>  1 https://www… FALSE         <NA>                Every           https://www.l…
+#>  2 https://www… FALSE         <NA>                Salesforce      https://www.l…
+#>  3 https://www… FALSE         <NA>                Box             https://www.l…
+#>  4 https://www… FALSE         <NA>                Michael Starkey https://www.l…
+#>  5 https://www… FALSE         <NA>                Commvault       https://www.l…
+#>  6 https://www… FALSE         <NA>                Sunbuds         https://www.l…
+#>  7 https://www… FALSE         <NA>                American Indus… https://www.l…
+#>  8 https://www… FALSE         <NA>                Zip             https://www.l…
+#>  9 https://www… FALSE         <NA>                American Indus… https://www.l…
+#> 10 https://www… FALSE         <NA>                American Indus… https://www.l…
+#> 11 https://www… FALSE         <NA>                Pharmefex Cons… https://www.l…
+#> 12 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
+#> 13 https://www… FALSE         <NA>                Seeds           https://www.l…
+#> 14 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
+#> 15 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
+#> 16 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
+#> 17 https://www… FALSE         <NA>                La Donna Claude https://www.l…
+#> 18 https://www… FALSE         <NA>                Delve - AI for… https://www.l…
+#> 19 https://www… FALSE         <NA>                Precision Risk… https://www.l…
+#> 20 https://www… FALSE         <NA>                ISU Steadfast … https://www.l…
+#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>,
+#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
+#> #   total_impressions_from <int>, total_impressions_to <int>,
+#> #   impressions_by_country <list>, ad_targeting <list>
 ```
 
-### Using Clean Data Format
+## How Search Works
 
-The `clean = TRUE` parameter removes list-columns for easier analysis:
+**Important**: LinkedIn’s Ad Library searches are based on the [official
+API documentation](https://www.linkedin.com/ad-library/api/ads):
 
-``` r
-# Get cleaned data without complex list-columns
-clean_ads <- li_query(
-  countries = c("us"),
-  clean = TRUE,
-  direction = "wide",
-  max_pages = 1,
-  count = 5
-)
-
-print("Clean data columns:")
-print(names(clean_ads))
-```
+- **Keywords**: Multiple keywords use **AND logic** - ALL keywords must
+  appear in the ad content
+- **Countries**: Only shows ads that were actually served in those
+  countries  
+- **Dates**: Filters by when ads were served (not when they were
+  created)
+- **Advertiser**: Searches company names that paid for the ads
 
 ## API Parameters
 
-The `li_query()` function supports all parameters from the [LinkedIn Ad
-Library API](https://www.linkedin.com/ad-library/api/ads):
+The `li_query()` function supports all parameters from the LinkedIn Ad
+Library API:
 
 | Parameter | Type | Description | Example |
 |----|----|----|----|
@@ -128,9 +163,6 @@ Library API](https://www.linkedin.com/ad-library/api/ads):
 The function returns a tibble with the following columns:
 
 ``` r
-# View the structure of returned data
-str(marketing_ads)
-
 # Key columns include:
 # - ad_url: Direct link to ad preview
 # - advertiser_name: Name of the advertiser
@@ -143,95 +175,184 @@ str(marketing_ads)
 
 ## Advanced Examples
 
-### Search with Multiple Criteria
+### How LinkedIn Ad Search Works
+
+LinkedIn’s Ad Library API searches through ad content using specific
+rules:
+
+**Keyword Search**: When you provide multiple keywords, they are treated
+with **logical AND operation**. This means ALL keywords must appear in
+the ad content.
 
 ``` r
-# Complex search combining multiple parameters
+# This searches for ads containing BOTH "artificial" AND "intelligence" AND "machine" AND "learning"
 tech_ads <- li_query(
   keyword = "artificial intelligence machine learning",
-  countries = c("us", "gb", "de", "fr"),
-  start_date = "2024-01-01",
-  end_date = "2024-06-30",
-  max_pages = 10
+  countries = c("us", "gb"),
+  start_date = "2025-01-01", 
+  end_date = "2025-01-31",
+  max_pages = 2
 )
+#> ℹ Retrieving page 1 (starting at index 0)...
+#> ✔ Retrieved 25 ads.
+#> ℹ Retrieving page 2 (starting at index 25)...
+#> ✔ Retrieved 25 ads.
+#> ✔ Reached `max_pages` limit.
+#> ✔ Total ads retrieved: 50
 
-print(paste("Found", nrow(tech_ads), "AI/ML ads"))
+tech_ads
+#> # A tibble: 50 × 13
+#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
+#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
+#>  1 https://www… FALSE         <NA>                OpenText        https://www.l…
+#>  2 https://www… FALSE         <NA>                Upwork          https://www.l…
+#>  3 https://www… FALSE         <NA>                Detekt Biomedi… https://www.l…
+#>  4 https://www… FALSE         <NA>                Web Summit      https://www.l…
+#>  5 https://www… FALSE         <NA>                OpenText        https://www.l…
+#>  6 https://www… FALSE         <NA>                Web Summit      https://www.l…
+#>  7 https://www… FALSE         <NA>                ServiceNow      https://www.l…
+#>  8 https://www… FALSE         <NA>                Web Summit      https://www.l…
+#>  9 https://www… FALSE         <NA>                Web Summit      https://www.l…
+#> 10 https://www… FALSE         <NA>                University of … https://www.l…
+#> # ℹ 40 more rows
+#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>,
+#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
+#> #   total_impressions_from <int>, total_impressions_to <int>,
+#> #   impressions_by_country <list>, ad_targeting <list>
+```
+
+**Advertiser Search**: You can also search by the company/organization
+that paid for the ads:
+
+``` r
+# Find all ads paid for by companies with "Microsoft" in their name
+microsoft_ads <- li_query(
+  advertiser = "Microsoft",
+  countries = c("us"),
+  max_pages = 1,
+  count = 10
+)
+#> ℹ Retrieving page 1 (starting at index 0)...
+#> ✔ Retrieved 10 ads.
+#> ✔ Reached `max_pages` limit.
+#> ✔ Total ads retrieved: 10
+
+microsoft_ads
+#> # A tibble: 10 × 13
+#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
+#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
+#>  1 https://www… FALSE         <NA>                Microsoft Azure https://www.l…
+#>  2 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#>  3 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#>  4 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#>  5 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#>  6 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#>  7 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#>  8 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#>  9 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
+#> 10 https://www… FALSE         <NA>                Microsoft Azure https://www.l…
+#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>, first_impression_at <lgl>,
+#> #   latest_impression_at <lgl>, total_impressions_from <int>,
+#> #   total_impressions_to <int>, impressions_by_country <list>,
+#> #   ad_targeting <list>
 ```
 
 ### Analyzing Targeting Data
 
-LinkedIn ads include targeting information showing how advertisers
-segment their audience:
+LinkedIn ads include targeting information, but **interpretation
+requires caution**. The API shows what segments advertisers *claim* to
+target, but doesn’t reveal much **targeting precision**. Does
+“Education” mean university graduates or current students? What is meant
+by “Job”? What job? This information should really be included but alas
+it is not.
 
 ``` r
-# Get ads with targeting data
-ads_with_targeting <- li_query(
-  countries = c("us"),
-  max_pages = 2,
-  count = 10
-)
-```
-
-Extract and analyze the targeting information:
-
-``` r
-library(dplyr)
-library(tidyr)
 
 # Unnest targeting data for analysis
-targeting_data <- ads_with_targeting |>
+targeting_data <- tech_ads |>
   tidyr::unnest(ad_targeting) |>
   dplyr::filter(!is.na(facet_name))
 
 print(paste("Found targeting data for", nrow(targeting_data), "targeting criteria"))
-```
+#> [1] "Found targeting data for 33 targeting criteria"
 
-Summarize the most common targeting approaches:
+# Show the top targeting categories
+top_targeting <- targeting_data %>% 
+  count(facet_name, sort = TRUE)
 
-``` r
-if (nrow(targeting_data) > 0) {
-  targeting_summary <- targeting_data |>
-    dplyr::count(facet_name, sort = TRUE)
-  
-  print("Most common targeting criteria:")
-  print(targeting_summary)
-} else {
-  print("No targeting data found for this query")
-}
+print("Most common targeting approaches:")
+#> [1] "Most common targeting approaches:"
+head(top_targeting, 5)
+#> # A tibble: 4 × 2
+#>   facet_name     n
+#>   <chr>      <int>
+#> 1 Language      11
+#> 2 Location      11
+#> 3 Audience       7
+#> 4 Company        4
 ```
 
 ### Geographic Impression Analysis
 
-When available, impression data shows how ads perform across different
-countries:
-
 ``` r
 # Look for geographic impression data
-impression_data <- ads_with_targeting |>
+impression_data <- tech_ads |>
   tidyr::unnest(impressions_by_country) |>
   dplyr::filter(!is.na(country))
 
-print(paste("Found impression data for", nrow(impression_data), "country distributions"))
-```
 
-Analyze the geographic distribution:
+# Visualize top countries only (limit to avoid clutter)
+library(ggplot2)
+  
+# Get top 5 countries by total impression volume
+top_countries <- impression_data %>% 
+  mutate(impression_per_country = total_impressions_to * (impression_percentage/100)) %>% 
+  group_by(country) %>% 
+  summarise(
+    total_ads = n(),
+    sum_impressions = sum(impression_per_country, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(sum_impressions)) %>%
+  slice_head(n = 5)
+
+print("Top 5 countries by number of ads:")
+#> [1] "Top 5 countries by number of ads:"
+print(top_countries)
+#> # A tibble: 5 × 3
+#>   country           total_ads sum_impressions
+#>   <chr>                 <int>           <dbl>
+#> 1 urn:li:country:IN         8         436775.
+#> 2 urn:li:country:FR         9         189111.
+#> 3 urn:li:country:EG         4         140344.
+#> 4 urn:li:country:GB        10         124144.
+#> 5 urn:li:country:NL         8          84478.
+```
 
 ``` r
-if (nrow(impression_data) > 0) {
-  country_summary <- impression_data |>
-    dplyr::group_by(country) |>
-    dplyr::summarise(
-      avg_impression_pct = mean(impression_percentage, na.rm = TRUE),
-      .groups = "drop"
-    ) |>
-    dplyr::arrange(desc(avg_impression_pct))
-  
-  print("Top countries by impression percentage:")
-  print(country_summary)
-} else {
-  print("No geographic impression data found for this query")
-}
+# Visualize impression distribution for top countries only
+impression_data %>%
+  filter(country %in% top_countries$country) %>%
+  group_by(country) %>%
+  mutate(impression_per_country = total_impressions_to * (impression_percentage / 100)) %>%
+  group_by(country) %>%
+  summarise(
+    total_ads = n(),
+    sum_impressions = sum(impression_per_country, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = country, y = sum_impressions)) +
+  geom_col() +
+  labs(
+    title = "Impression Percentage Distribution by Country",
+    subtitle = "Top 5 countries by ad volume",
+    x = "Country",
+    y = "Impression Percentage"
+  ) +
+  theme_minimal()
 ```
+
+<img src="man/figures/README-impression-analysis-1.png" width="100%" />
 
 ### Clean Data Format Options
 
@@ -242,15 +363,34 @@ analysis:
 # Wide format: countries become separate columns, targeting flattened
 clean_wide <- li_query(
   countries = c("us"),
+  start_date = "2025-01-01", 
+  end_date = "2025-01-31",
   clean = TRUE,
   direction = "wide",
   max_pages = 1,
   count = 5
 )
+#> ℹ Retrieving page 1 (starting at index 0)...
+#> ✔ Retrieved 5 ads.
+#> ✔ Reached `max_pages` limit.
+#> ✔ Total ads retrieved: 5
 
-print("Clean wide format columns:")
-print(names(clean_wide))
-print(paste("Dimensions:", nrow(clean_wide), "x", ncol(clean_wide)))
+clean_wide
+#> # A tibble: 5 × 178
+#>   ad_url        is_restricted restriction_details advertiser_name advertiser_url
+#>   <chr>         <lgl>         <chr>               <chr>           <chr>         
+#> 1 https://www.… FALSE         <NA>                Orca Security   https://www.l…
+#> 2 https://www.… FALSE         <NA>                KLOwen Ortho    https://www.l…
+#> 3 https://www.… FALSE         <NA>                Hashlock        https://www.l…
+#> 4 https://www.… FALSE         <NA>                Alkemi          https://www.l…
+#> 5 https://www.… FALSE         <NA>                Hashlock        https://www.l…
+#> # ℹ 173 more variables: ad_payer <chr>, ad_type <chr>,
+#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
+#> #   total_impressions_from <int>, total_impressions_to <int>,
+#> #   impressions_mid <dbl>, targeting_facets <chr>, targeting_segments <chr>,
+#> #   impression_pct_GQ <dbl>, impression_pct_NU <dbl>, impression_pct_WS <dbl>,
+#> #   impression_pct_AD <dbl>, impression_pct_AM <dbl>, impression_pct_AR <dbl>,
+#> #   impression_pct_BI <dbl>, impression_pct_BS <dbl>, …
 ```
 
 Notice the key improvements in wide format: - `impressions_mid`:
@@ -261,31 +401,39 @@ of targeting approaches - Country columns (when data available):
 ``` r
 # Long format: all targeting/impression data stacked with type indicators
 clean_long <- li_query(
-  countries = c("us"),
+  countries = c("fr"),
+  start_date = "2025-01-01", 
+  end_date = "2025-01-31",
   clean = TRUE,
   direction = "long",
   max_pages = 1,
   count = 5
 )
+#> ℹ Retrieving page 1 (starting at index 0)...
+#> ✔ Retrieved 5 ads.
+#> ✔ Reached `max_pages` limit.
+#> ✔ Total ads retrieved: 5
 
-print("Clean long format columns:")
-print(names(clean_long))
-print(paste("Dimensions:", nrow(clean_long), "x", ncol(clean_long)))
-```
-
-Long format makes comparative analysis easy:
-
-``` r
-if (nrow(clean_long) > 0 && "data_type" %in% names(clean_long)) {
-  # Count different types of data available
-  data_summary <- clean_long |>
-    dplyr::count(data_type, sort = TRUE)
-  
-  print("Data types found:")
-  print(data_summary)
-} else {
-  print("No extended data available for this query")
-}
+clean_long
+#> # A tibble: 347 × 18
+#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
+#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
+#>  1 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  2 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  3 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  4 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  5 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  6 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  7 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  8 https://www… FALSE         <NA>                Codecov         https://www.l…
+#>  9 https://www… FALSE         <NA>                Codecov         https://www.l…
+#> 10 https://www… FALSE         <NA>                Codecov         https://www.l…
+#> # ℹ 337 more rows
+#> # ℹ 13 more variables: ad_payer <chr>, ad_type <chr>,
+#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
+#> #   total_impressions_from <int>, total_impressions_to <int>,
+#> #   impressions_mid <dbl>, data_type <chr>, category <chr>, value <chr>,
+#> #   is_included <lgl>, is_excluded <lgl>, percentage <dbl>
 ```
 
 ## Data Format Options
