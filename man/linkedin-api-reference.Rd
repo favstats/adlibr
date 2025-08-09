@@ -121,3 +121,4 @@ The returned data frame contains the following columns:
 \references{
 LinkedIn Ad Library API Documentation: \url{https://www.linkedin.com/ad-library/api/ads}
 }
+\keyword{internal}

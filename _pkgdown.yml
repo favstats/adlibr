@@ -18,6 +18,7 @@ navbar:
   right:
     - icon: fab fa-github
       href: https://github.com/favstats/liads
+      aria-label: "GitHub"
 
 reference:
   - title: "Authentication"

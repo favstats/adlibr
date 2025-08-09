@@ -104,5 +104,6 @@
 #' @references 
 #' LinkedIn Ad Library API Documentation: \url{https://www.linkedin.com/ad-library/api/ads}
 #'
+#' @keywords internal
 #' @name linkedin-api-reference
 NULL

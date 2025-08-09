@@ -10,7 +10,7 @@ Description: A comprehensive R client for the LinkedIn Ad Library API. Provides
     parameters and returns structured data frames with detailed ad information,
     targeting data, and impression statistics.
 License: MIT + file LICENSE
-URL: https://github.com/favstats/liads
+URL: https://github.com/favstats/liads, https://favstats.github.io/liads
 BugReports: https://github.com/favstats/liads/issues
 Imports:
     httr,
