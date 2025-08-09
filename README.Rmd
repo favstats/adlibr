@@ -14,108 +14,151 @@ knitr::opts_chunk$set(
 )
 ```
 
-# liads
+# adlibr <img src="man/figures/logo.png" align="right" width="120"/>
 
 <!-- badges: start -->
-[![CRAN status](https://www.r-pkg.org/badges/version/liads)](https://CRAN.R-project.org/package=liads)
-[![Lifecycle: stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+[![CRAN status](https://www.r-pkg.org/badges/version/adlibr)](https://CRAN.R-project.org/package=adlibr)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![R-CMD-check](https://github.com/favstats/adlibr/workflows/R-CMD-check/badge.svg)](https://github.com/favstats/adlibr/actions)
 <!-- badges: end -->
 
-**liads** is a comprehensive R client for the [LinkedIn Ad Library API](https://www.linkedin.com/ad-library/api/ads). It provides tools for OAuth 2.0 authentication, querying ads by various criteria, automatic pagination, and robust data processing.
+**adlibr** is a unified R client for accessing ad library APIs across major digital platforms. It provides a consistent interface for retrieving, analyzing, and comparing advertising data from Meta (Facebook/Instagram), TikTok, Microsoft (Bing), Apple App Store, Google (BigQuery datasets), and other platforms supporting ad transparency initiatives.
+
+## Features
+
+- **🔀 Unified Interface**: Single API for multiple ad library platforms
+- **🔐 Secure Authentication**: OAuth 2.0, API keys, and secure credential storage
+- **📊 Data Normalization**: Common schema across all platforms for easy comparison
+- **⚡ Automatic Pagination**: Handles platform-specific pagination automatically
+- **🛡️ Rate Limiting**: Built-in retry logic with exponential backoff
+- **🎯 Flexible Filtering**: Search by keywords, advertisers, countries, dates, and more
+- **📈 Rich Metadata**: Targeting criteria, spend ranges, impressions, and creative assets
+
+## Supported Platforms
+
+| Platform | Status | Authentication | Coverage |
+|----------|--------|----------------|----------|
+| **Meta** (Facebook/Instagram) | ✅ Ready | Graph API Token | Global (political), EU/UK (all ads) |
+| **TikTok** | ✅ Ready | OAuth 2.0 | EU, expanding globally |
+| **Microsoft** (Bing) | ✅ Ready | Optional API Key | EU/EEA |
+| **Apple** App Store | ✅ Ready | Public API | Global |
+| **Google** (BigQuery) | ✅ Ready | GCP Service Account | Political ads |
+| **Amazon** | 🔧 In Development | OAuth 2.0 | EU |
+| **Pinterest** | 📋 Planned | API Key | EU (DSA) |
+| **Snapchat** | 📋 Planned | API Key | EU, Global (political) |
+| **X** (Twitter) | ⚠️ Limited | API Key | Limited compliance |
 
 ## Installation
 
-You can install the development version of liads from [GitHub](https://github.com/favstats/liads) with:
+You can install the development version of adlibr from [GitHub](https://github.com/favstats/adlibr) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("favstats/liads")
+devtools::install_github("favstats/adlibr")
 ```
 
 ## Quick Start
 
 ### 1. Authentication Setup
 
-First, set up your LinkedIn Developer App credentials (one-time setup):
+Configure credentials for the platforms you want to use:
 
 ```{r setup, eval = F}
-library(liads)
+library(adlibr)
 
-# Configure your LinkedIn app credentials
-li_auth_configure()  # You'll be prompted to enter Client ID and Secret
+# Interactive setup for all platforms
+adlibr_auth_setup()
 
-# Authenticate (opens browser for OAuth)
-li_auth()
+# Or setup specific platforms
+adlibr_auth_setup(c("meta", "tiktok"))
+
+# Check authentication status
+adlibr_auth_status()
 ```
 
 ```{r, eval = T, include = FALSE}
 devtools::load_all()
 library(dplyr)
 library(tidyr)
-
 ```
-
 
 ### 2. Basic Usage
 
 ```{r basic-search}
-# Simple keyword search
-marketing_ads <- li_query(
-  keyword = "marketing",
-  max_pages = 1
-)
+# Search Meta ads for climate change content
+meta_ads <- adlibr_search("meta", 
+                         q = "climate change",
+                         countries = c("US", "CA"),
+                         date_from = "2024-01-01",
+                         limit = 50)
 ```
 
-The most basic search uses just a keyword. This returns raw data with list-columns for detailed analysis:
+### 3. Cross-Platform Searching
 
-```{r basic-results}
-marketing_ads
+```{r cross-platform}
+# Search across multiple platforms
+platforms <- c("meta", "tiktok", "microsoft")
+election_ads <- purrr::map_df(platforms, ~{
+  adlibr_search(.x, q = "election", countries = "US", limit = 10)
+})
+
+# Compare ad volumes by platform
+election_ads %>% 
+  count(platform, sort = TRUE)
 ```
 
-### Searching by Country
+### 4. Advertiser and Detailed Searches
 
-For more targeted results, search within specific countries:
+```{r advertiser-search}
+# Find advertisers on TikTok
+tiktok_advertisers <- adlibr_advertisers("tiktok", q = "tech company")
 
-```{r country-search}
-us_ads <- li_query(
-  countries = c("us"),
-  max_pages = 2,
-  count = 10
-)
-
-us_ads
+# Get detailed information for specific ads
+ad_details <- adlibr_details("meta", c("ad_id_1", "ad_id_2"))
 ```
 
-## How Search Works
+## Unified Data Schema
 
-**Important**: LinkedIn's Ad Library searches are based on the [official API documentation](https://www.linkedin.com/ad-library/api/ads):
+All platforms return data in a consistent format:
 
-- **Keywords**: Multiple keywords use **AND logic** - ALL keywords must appear in the ad content
-- **Countries**: Only shows ads that were actually served in those countries  
-- **Dates**: Filters by when ads were served (not when they were created)
-- **Advertiser**: Searches company names that paid for the ads
+```{r data-structure}
+# Common columns across all platforms:
+colnames(meta_ads)
+```
 
-## API Parameters
+Key fields include:
+- `ad_id`: Platform-specific identifier
+- `platform`: Source platform
+- `advertiser_name`: Organization name
+- `first_seen`/`last_seen`: Date ranges
+- `ad_text`: Advertisement content
+- `media_type` & `media_urls`: Creative assets
+- `countries`: Geographic targeting
+- `targeting_*`: Audience targeting criteria
+- `extra_json`: Raw platform-specific data
 
-The `li_query()` function supports all parameters from the LinkedIn Ad Library API:
+## Unified API Parameters
+
+All `adlibr_*` functions support consistent parameters across platforms:
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `keyword` | String | Keywords to search in ad content (AND logic) | `"data science"` |
-| `advertiser` | String | Advertiser name to search | `"Microsoft"` |
-| `countries` | Character vector | 2-letter ISO country codes | `c("us", "gb", "de")` |
-| `start_date` | Date/String | Start date (inclusive) | `"2024-01-01"` |
-| `end_date` | Date/String | End date (exclusive) | `"2024-12-31"` |
-| `count` | Integer | Results per page (max 25) | `25` |
-| `max_pages` | Integer | Maximum pages to retrieve | `10` |
-| `clean` | Logical | Return simplified data without list-columns | `TRUE` |
-| `direction` | String | When clean=TRUE: "wide" or "long" format | `"wide"` |
+| `platform` | String | Platform to query | `"meta"`, `"tiktok"`, `"microsoft"` |
+| `q` | String | Keywords to search in ad content | `"climate change"` |
+| `advertisers` | Character vector | Advertiser names or IDs | `c("Microsoft", "Google")` |
+| `countries` | Character vector | ISO 3166-1 alpha-2 country codes | `c("US", "GB", "DE")` |
+| `date_from` | Date/String | Start date (YYYY-MM-DD) | `"2024-01-01"` |
+| `date_to` | Date/String | End date (YYYY-MM-DD) | `"2024-12-31"` |
+| `types` | Character vector | Platform-specific ad types | Platform dependent |
+| `languages` | Character vector | ISO 639-1 language codes | `c("en", "es", "fr")` |
+| `limit` | Integer | Results per page (max 1000) | `100` |
+| `page_token` | String | Pagination token for next page | From previous response |
 
 ## Data Structure
 
 The function returns a tibble with the following columns:
 
-```{r data-structure}
+```{r data-fields}
 # Key columns include:
 # - ad_url: Direct link to ad preview
 # - advertiser_name: Name of the advertiser
@@ -136,12 +179,12 @@ LinkedIn's Ad Library API searches through ad content using specific rules:
 
 ```{r search-explanation}
 # This searches for ads containing BOTH "artificial" AND "intelligence" AND "machine" AND "learning"
-tech_ads <- li_query(
-  keyword = "artificial intelligence machine learning",
+tech_ads <- adlibr_search("linkedin",
+  q = "artificial intelligence machine learning",
   countries = c("us", "gb"),
-  start_date = "2025-01-01", 
-  end_date = "2025-01-31",
-  max_pages = 2
+  date_from = "2025-01-01", 
+  date_to = "2025-01-31",
+  limit = 50
 )
 
 tech_ads
@@ -151,11 +194,10 @@ tech_ads
 
 ```{r advertiser-search}
 # Find all ads paid for by companies with "Microsoft" in their name
-microsoft_ads <- li_query(
-  advertiser = "Microsoft",
+microsoft_ads <- adlibr_search("linkedin",
+  advertisers = "Microsoft",
   countries = c("us"),
-  max_pages = 1,
-  count = 10
+  limit = 10
 )
 
 microsoft_ads
@@ -243,14 +285,11 @@ The `clean = TRUE` parameter simplifies the data structure for easier analysis:
 
 ```{r clean-wide-demo}
 # Wide format: countries become separate columns, targeting flattened
-clean_wide <- li_query(
+clean_wide <- adlibr_search("linkedin",
   countries = c("us"),
-  start_date = "2025-01-01", 
-  end_date = "2025-01-31",
-  clean = TRUE,
-  direction = "wide",
-  max_pages = 1,
-  count = 5
+  date_from = "2025-01-01", 
+  date_to = "2025-01-31",
+  limit = 5
 )
 
 clean_wide
@@ -263,14 +302,11 @@ Notice the key improvements in wide format:
 
 ```{r clean-long-demo}
 # Long format: all targeting/impression data stacked with type indicators
-clean_long <- li_query(
+clean_long <- adlibr_search("linkedin",
   countries = c("fr"),
-  start_date = "2025-01-01", 
-  end_date = "2025-01-31",
-  clean = TRUE,
-  direction = "long",
-  max_pages = 1,
-  count = 5
+  date_from = "2025-01-01", 
+  date_to = "2025-01-31",
+  limit = 5
 )
 
 clean_long
@@ -288,28 +324,94 @@ clean_long
 ## Rate Limits and Best Practices
 
 - **Maximum 25 results per request** (API limitation)
+- **Daily rate limits** applied per application and per member
+- **Automatic retry handling**: 429 errors trigger exponential backoff (2, 4, 8 seconds)
 - **Use pagination** for large datasets with `max_pages` parameter
 - **Specific searches** may return fewer results than broad searches
 - **Date ranges**: start is inclusive, end is exclusive
 - **Keywords**: Multiple keywords use AND logic
 - **Countries**: Use lowercase 2-letter ISO codes
 
+⚠️ **Rate Limiting Behavior**: If you exceed LinkedIn's rate limits, the package automatically waits and retries up to 3 times with increasing delays. This ensures your queries succeed even during high-usage periods.
+
 ## Authentication Details
 
 The package uses OAuth 2.0 with automatic token caching:
 
-1. **Setup**: `li_auth_configure()` stores app credentials in `.Renviron`
-2. **Authentication**: `li_auth()` opens browser for user consent
-3. **Token Storage**: Tokens are cached in `.httr-oauth` for reuse
+1. **Setup**: `adlibr_auth_setup()` guides you through credential configuration  
+2. **Authentication**: Opens browser for user consent when needed
+3. **Token Storage**: Credentials are securely stored in environment variables
 4. **Automatic Refresh**: Tokens are automatically refreshed when needed
 
 ## API Reference
 
 Full API documentation is available at: https://www.linkedin.com/ad-library/api/ads
 
+## Advanced Usage
+
+### Bulk Data Collection
+
+```{r bulk-collection, eval = FALSE}
+# Get all available data with automatic pagination
+all_election_ads <- adlibr_get_all("meta", "search_ads", 
+                                  list(q = "election", countries = "US"),
+                                  max_pages = 10, delay = 2)
+```
+
+### Platform-Specific Features
+
+```{r platform-features, eval = FALSE}
+# Check what platforms are available
+adlibr_platforms()
+
+# Check authentication status
+adlibr_auth_status()
+
+# Platform-specific targeting analysis
+meta_targeting <- meta_ads %>%
+  filter(!map_lgl(targeting_age, is.null)) %>%
+  unnest(targeting_age)
+```
+
+## Research Applications
+
+**adlibr** is designed for researchers studying:
+
+- 📊 **Digital campaigning** across platforms
+- 🎯 **Advertising targeting** practices 
+- 🌍 **Cross-platform content analysis**
+- 📈 **Ad spending transparency**
+- 🔍 **Disinformation research**
+- 📱 **Platform policy compliance**
+
+## Rate Limits & Best Practices
+
+- **Respect rate limits**: Each platform has different limits
+- **Use delays**: Add delays between requests for large datasets
+- **Cache responses**: Save results to avoid re-querying
+- **Batch efficiently**: Use appropriate `limit` parameters
+- **Monitor usage**: Check authentication status regularly
+
 ## Contributing
 
-Please report bugs and feature requests at: https://github.com/favstats/liads/issues
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+- 🐛 **Bug reports**: https://github.com/favstats/adlibr/issues
+- 💡 **Feature requests**: https://github.com/favstats/adlibr/discussions
+- 🔧 **Pull requests**: Welcome for bug fixes and new features
+
+## Citation
+
+If you use adlibr in your research, please cite:
+
+```bibtex
+@software{adlibr,
+  title = {adlibr: Unified R Client for Ad Library APIs},
+  author = {Fabio Votta},
+  url = {https://github.com/favstats/adlibr},
+  year = {2024}
+}
+```
 
 ## License
 

@@ -1,29 +1,46 @@
-Package: liads
-Title: LinkedIn Ad Library API Client
-Version: 1.0.0
+Package: adlibr
+Title: Unified API Client for Ad Libraries Across Platforms
+Version: 0.1.0
 Authors@R: 
     person("Fabio", "Votta", , "fabio.votta@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-3143-7315"))
-Description: A comprehensive R client for the LinkedIn Ad Library API. Provides 
-    functions for OAuth 2.0 authentication, querying ads by keyword/advertiser/country/date,
-    automatic pagination, and robust data processing. Supports all official API 
-    parameters and returns structured data frames with detailed ad information,
-    targeting data, and impression statistics.
+Description: A comprehensive R client providing unified access to ad library APIs 
+    across major platforms including Meta (Facebook/Instagram), TikTok, Microsoft 
+    (Bing), Apple App Store, Amazon, Google (BigQuery datasets), and others. 
+    Features OAuth 2.0 authentication, automatic pagination, rate limiting with 
+    exponential backoff, and data normalization to a common schema. Designed for 
+    researchers, journalists, and analysts studying digital advertising transparency.
 License: MIT + file LICENSE
-URL: https://github.com/favstats/liads, https://favstats.github.io/liads
-BugReports: https://github.com/favstats/liads/issues
+URL: https://github.com/favstats/adlibr, https://favstats.github.io/adlibr
+BugReports: https://github.com/favstats/adlibr/issues
 Imports:
     httr,
+    httr2,
     jsonlite,
     dplyr,
     purrr,
     tibble,
-    usethis,
-    lubridate,
-    urltools
+    rlang,
+    stringi,
+    clock,
+    cli,
+    withr,
+    memoise,
+    glue,
+    yaml,
+    keyring,
+    bigrquery,
+    tidyr
 Suggests: 
     testthat (>= 3.0.0),
-    ggplot2
+    httptest2,
+    waldo,
+    vcr,
+    ggplot2,
+    targets,
+    knitr,
+    rmarkdown,
+    getPass
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

@@ -1,0 +1,278 @@
+Platform specs (package-ready)
+
+Meta (Facebook & Instagram) — Ad Library API
+
+Base: https://graph.facebook.com/{VERSION}/ads_archive
+Docs: Meta Ad Library API page (parameters + fields) and example query are public.  ￼
+
+Search (ads)
+	•	Method: GET /{v}/ads_archive
+	•	Required params:
+	•	ad_reached_countries (array of ISO codes; required)
+	•	Optional filters:
+	•	search_terms (keyword), ad_type (ALL, POLITICAL_AND_ISSUE_ADS, EMPLOYMENT_ADS, HOUSING_ADS, FINANCIAL_PRODUCTS_AND_SERVICES_ADS),
+	•	ad_active_status (ACTIVE|INACTIVE|ALL),
+	•	ad_delivery_date_min, ad_delivery_date_max (YYYY-MM-DD),
+	•	languages (ISO 639-1/selected 639-3), media_type, publisher_platforms, bylines, unmask_removed_content (bool).  ￼
+	•	Fields (select via fields=): includes id, page_id, page_name, ad_snapshot_url, ad_creation_time, ad_delivery_start_time, ad_delivery_stop_time; EU/UK-specific: age_country_gender_reach_breakdown, target_*, eu_total_reach, political-only: spend, impressions, demographic_distribution, delivery_by_region, beneficiary_payers, etc.  ￼
+	•	Pagination: limit, paging.next with before/after cursors.  ￼
+	•	Auth: Graph API access_token; identity/location verification required for political data.  ￼
+	•	Coverage window: all ads shown in EU/UK (1y); political/social worldwide (7y).  ￼
+
+Mapping → normalized
+	•	ad_id ← id; advertiser_id ← page_id; advertiser_name ← page_name
+	•	first_seen ← ad_delivery_start_time; last_seen ← ad_delivery_stop_time
+	•	ad_text ← paste(ad_creative_bodies)
+	•	media_type ← media_type; media_urls ← ad_snapshot_url
+	•	spend_range ← spend; impressions_range ← impressions
+	•	eu_reach ← eu_total_reach
+	•	payer/beneficiary ← beneficiary_payers
+	•	targeting_* ← target_ages / target_gender / target_locations (EU/UK and BR where noted)
+
+⸻
+
+TikTok — Commercial Content Library (AdLib) API
+
+Base: https://open.tiktokapis.com/v2/research/adlib/…
+Docs: Query Advertisers, Query Ads, Ad Details, overview.  ￼
+
+Advertiser search
+	•	POST /advertiser/query?fields=business_id,business_name,country_code
+	•	Body: search_term (≤50 chars), max_count (≤50). Returns advertisers list.  ￼
+
+Search (ads)
+	•	POST /ad/query?fields=… (fields include ad.*, advertiser.*)
+	•	Typical body filters: search_term, country_code, advertiser_business_ids, ad_published_date_range (min/max). Pagination via max_count, has_more, search_id. (“Query Ads” doc is linked from the same section as Advertisers/Details.)  ￼
+
+Ad details
+	•	POST /ad/detail?fields=… with ad_id in body. Fields include: ad.id, first_shown_date, last_shown_date, status, videos, image_urls, reach.unique_users_seen(_by_country), and ad_group.targeting_info (age/gender/country, audience flags).  ￼
+
+Auth & scope
+	•	OAuth client-credentials → Bearer token; scope research.adlib.basic. EU data initially; globally available endpoints.  ￼
+
+Mapping → normalized
+	•	ad_id ← ad.id; advertiser_id ← advertiser.business_id; advertiser_name ← advertiser.business_name
+	•	first_seen/last_seen ← ad.first_shown_date / ad.last_shown_date
+	•	status ← ad.status; media_urls ← ad.videos$url + image_urls
+	•	impressions_range/eu_reach ← reach.* (strings)
+	•	targeting_* ← ad_group.targeting_info{age,gender,country,…}
+
+⸻
+
+Microsoft (Bing) — Ad Library API
+
+Base: https://adlibrary.api.bingads.microsoft.com/api/v1/
+Docs: Official Microsoft Learn page (endpoints, params, types, auth).  ￼
+
+Advertiser search
+	•	GET Advertisers?searchText=&top=&skip=
+	•	GET Advertisers/{AdvertiserId} (Note: AdvertiserId may resolve to parent VerifiedAdvertiserId).  ￼
+
+Search (ads)
+	•	GET Ads?searchText=&advertiserId=&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&countryCodes=10,26,…&top=&skip=
+	•	GET Ads/{AdId}.
+	•	Data objects include AdDetails with PaidForByName, StartDate, EndDate, TotalImpressionsRange, ImpressionsByCountry, TargetTypes (gender, age, location, Microsoft/Advertiser audiences), plus EU/EEA country code table.  ￼
+
+Pagination: top, skip.
+Auth: Public (no auth) with strict limits; higher quotas via DeveloperToken + AuthenticationToken headers (OAuth).  ￼
+
+Mapping → normalized
+	•	ad_id ← AdId; advertiser_id ← AdvertiserId; advertiser_name ← AdvertiserName
+	•	first_seen/last_seen ← AdDetails.StartDate / EndDate
+	•	impressions_range ← AdDetails.TotalImpressionsRange
+	•	countries ← ImpressionsByCountry$Country
+	•	targeting_other ← TargetTypes (serialize)
+
+⸻
+
+Apple — App Store Ad Repository API
+
+Base: https://adrepository.apple.com/api/v1/
+Docs (PDF, Mar 2025): endpoints, params, response properties.  ￼
+
+Entities (name lookup)
+	•	GET /ad-repository-entities?name=&types=APP|DEVELOPER&offset=&limit=.  ￼
+
+Countries
+	•	GET /countries-or-regions (ISO-3166-1 alpha-2 codes).  ￼
+
+Search (ads)
+	•	GET /ad-repository-ads?type=APP|DEVELOPER&id=<appId|developerId>&countryOrRegion=<CC>&datePreset=LAST_90_DAYS|LAST_180_DAYS|LAST_YEAR&limit=&offset=
+	•	Rich ad/metadata including placement, format, language/device display context, and audience refinement flags (age/gender/location/customer type). Response includes pagination block.  ￼
+
+Pagination: limit, offset (+ response pagination).  ￼
+Auth: Public; HTTPS; no Accept: */*.  ￼
+
+Mapping → normalized
+	•	ad_id ← adId; advertiser_id ← developerId; advertiser_name ← developerName
+	•	ad_text ← shortDescription || promotionalText
+	•	media_urls ← adAssets.pictureUrl/videoUrl
+	•	countries ← countryOrRegion
+	•	targeting_* ← audienceRefinement{ageTarget, genderTarget, locationTarget}
+	•	first_seen/last_seen ← firstImpressionDate / lastImpressionDate (when present)
+
+⸻
+
+Amazon Store — Ad Library API (EU)
+
+Base (region): https://advertising-api-eu.amazon.com
+Docs: Public pages confirm the Ad Library API exists (overview/get started), but full reference/endpoints require Amazon Ads onboarding; Mozilla/CheckFirst also note the API endpoint.  ￼ ￼
+
+Status for package
+	•	Implement client scaffolding (OAuth + region host selection). Expose:
+	•	adlib_search("amazon", ...) → pass-through to their documented search once you have credentials
+	•	adlib_advertisers("amazon", ...)
+	•	Clearly mark as “requires developer onboarding” at runtime; unit-test behind an env-flag.
+
+⸻
+
+Google — Ads Transparency Center (no public REST; official dataset)
+
+What’s official & stable: Google’s Ads Transparency Center UI and the BigQuery public datasets for political ads (and an Ads Transparency Center dataset in Marketplace). No first-party public REST for the general library.  ￼ ￼ ￼
+
+Package approach
+	•	Provide adlib_search("google", ...) via BigQuery (e.g., bigrquery) for political ads dataset: advertiser, ad text, spend/impressions ranges, first/last shown, regions.  ￼ ￼
+	•	Avoid third-party scraping APIs (e.g., SerpAPI/SearchAPI) unless you plan an “unofficial connectors” module; if added, gate behind use_unofficial = TRUE.  ￼ ￼
+
+Mapping: straightforward from dataset columns (keep ranges as strings; normalize dates, regions).
+
+⸻
+
+Booking.com — Ads Repository (API exists; limited docs)
+
+Status: Booking.com’s DSA page confirms an ads repository; Mozilla/CheckFirst report that an API exists (GraphQL-style single endpoint), but with limited docs, weak filtering (no date/country), and occasional downtime. Treat as unstable and experimental in your package.  ￼ ￼
+
+Package approach
+	•	Provide an optional module adlib_search("booking", ...) with best-effort GraphQL client once docs/access are available; otherwise, keep stub with proper error message.
+
+⸻
+
+Pinterest — Ads Repository (UI; no public API docs)
+
+Status: Pinterest publicly documents DSA compliance and reports, but no official public ad-library API doc is published; reports/audit describe an ads repository. Implement UI connector only if Pinterest publishes a public API.  ￼
+
+⸻
+
+Snapchat — Ads Gallery / Political & Advocacy Library (UI; no public API)
+
+Status: Snapchat discloses EU ads via gallery and political library. No public ad-repository API. Do not scrape.  ￼
+
+⸻
+
+X (Twitter) — Ads Repository (UI references; no usable API; DSA non-compliance findings)
+
+Status: Investigations note missing/insufficient repository/API access under DSA. Exclude from API module.  ￼ ￼
+
+⸻
+
+Cross-platform parameter mapping (for your wrapper)
+
+
+Unified param
+Meta
+TikTok
+Microsoft (Bing)
+Apple
+Google (BQ)
+q
+search_terms
+search_term
+searchText
+(none; use Entities then ads)
+dataset text filter
+advertisers
+page_ids (ids only)
+advertiser_business_ids
+advertiserId
+type=id (APP/DEVELOPER)
+advertiser id/domain (dataset)
+countries
+ad_reached_countries (req.)
+country_code
+countryCodes (EU/EEA numeric set)
+countryOrRegion
+region field
+date_from/to
+ad_delivery_date_min/max
+ad_published_date_range
+startDate/endDate
+datePreset enums
+dataset date filters
+types
+ad_type
+n/a
+n/a
+placement/format (filter client-side)
+political only
+languages
+languages
+n/a
+n/a
+language metadata
+dataset language if present
+media
+media_type
+choose fields
+n/a
+adAssets.*
+creative_format (if available)
+limit
+limit
+max_count
+top
+limit
+query limit
+page_token
+after cursor
+search_id/has_more
+skip
+offset
+page token (BQ)
+
+
+Auth & rate-limiting (implement in your R client)
+	•	Meta: bearer access_token; additional verification needed for political data; cursor paging. Backoff on 4xx/5xx.  ￼
+	•	TikTok: client-credentials → Bearer; scope research.adlib.basic; per-request fields selection; use search_id pagination.  ￼
+	•	Microsoft (Bing): unauthenticated allowed with stricter quotas; increase via DeveloperToken + OAuth AuthenticationToken; headers documented.  ￼
+	•	Apple: public HTTPS; no Accept: */*; rate limits not stated—add conservative retry.  ￼
+	•	Amazon: OAuth (Amazon Ads onboarding); region host; quotas per account.  ￼
+	•	Google: BigQuery auth via GCP service account or user creds; billable queries (free tier for some datasets).  ￼
+
+⸻
+
+R package scaffolding (concise blueprint)
+	•	Use httr2 for HTTP, jsonlite for parsing, clock for dates, stringi for text, dplyr for normalization.
+	•	Per-platform files: meta.R, tiktok.R, microsoft.R, apple.R, amazon.R (stub), google_bq.R.
+	•	Env vars: META_TOKEN, TIKTOK_CLIENT_ID, TIKTOK_CLIENT_SECRET, MS_DEV_TOKEN, MS_AUTH_TOKEN, AMZN_CLIENT_ID/SECRET/REFRESH, GOOGLE_APPLICATION_CREDENTIALS.
+	•	Respect ToS; no scraping of UI-only repositories.
+
+Example minimal signatures you can implement immediately:
+
+
+adlib_search <- function(platform, q=NULL, advertisers=NULL, countries=NULL,
+                         date_from=NULL, date_to=NULL, types=NULL, languages=NULL,
+                         media=NULL, limit=50, page_token=NULL, fields=NULL, ...) { ... }
+
+adlib_advertisers <- function(platform, q, country=NULL, limit=50, page_token=NULL, fields=NULL, ...) { ... }
+
+adlib_details <- function(platform, ad_id, fields=NULL, ...) { ... }
+
+
+adlib_normalize <- function(raw, platform) {
+  # map fields per platform -> common schema; keep everything else in extra_json
+}
+
+
+Quick reality checks & caveats
+	•	Google: treat as dataset-based, not REST; if you add third-party “scraping APIs,” gate them behind use_unofficial=TRUE and a separate namespace.  ￼ ￼
+	•	Amazon: endpoints/fields require onboarding; your package should expose the interface but throw a friendly error without creds.  ￼
+	•	Coverage windows and EU-specific fields vary (e.g., Meta EU targets/beneficiary). Always document per-platform field availability.  ￼
+
+⸻
+
+If you want, I can spin up:
+	1.	a ready-to-build R package skeleton (roxygen, tests, vignettes, CI),
+	2.	working example calls for Meta/TikTok/Microsoft/Apple, and
+	3.	a field-by-field normalization map as a CSV you can maintain in the repo.
+
+Say the word and I’ll generate the repo structure + stubs.

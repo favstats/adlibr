@@ -1,0 +1,303 @@
+{
+  "schema_version": "0.1.0",
+  "description": "Normalized schema for ad library data across platforms",
+  "fields": {
+    "ad_id": {
+      "type": "character",
+      "description": "Platform-specific ad identifier",
+      "required": true,
+      "example": "23850468573401234"
+    },
+    "platform": {
+      "type": "character",
+      "description": "Source platform name",
+      "required": true,
+      "allowed_values": ["meta", "tiktok", "microsoft", "apple", "amazon", "google", "booking", "pinterest", "snapchat", "x"],
+      "example": "meta"
+    },
+    "advertiser_id": {
+      "type": "character",
+      "description": "Platform-specific advertiser/organization identifier",
+      "required": false,
+      "example": "123456789"
+    },
+    "advertiser_name": {
+      "type": "character",
+      "description": "Display name of the advertiser",
+      "required": false,
+      "example": "Acme Corporation"
+    },
+    "advertiser_verified": {
+      "type": "logical",
+      "description": "Whether the advertiser is verified by the platform",
+      "required": false,
+      "example": true
+    },
+    "advertiser_type": {
+      "type": "character",
+      "description": "Type of advertiser entity",
+      "required": false,
+      "allowed_values": ["candidate", "elected_official", "political_party", "non_profit", "public_figure", "organization", "individual", "unknown"],
+      "example": "organization"
+    },
+    "payer": {
+      "type": "character",
+      "description": "Entity that paid for the advertisement",
+      "required": false,
+      "example": "Acme Corporation"
+    },
+    "beneficiary": {
+      "type": "character",
+      "description": "Beneficiary of the advertisement when different from payer",
+      "required": false,
+      "example": "Acme Political Action Committee"
+    },
+    "status": {
+      "type": "character",
+      "description": "Current status of the advertisement",
+      "required": false,
+      "allowed_values": ["ACTIVE", "INACTIVE", "REMOVED", "PENDING", "REJECTED"],
+      "example": "ACTIVE"
+    },
+    "first_seen": {
+      "type": "datetime",
+      "description": "First time the ad was shown or became active",
+      "required": false,
+      "format": "ISO 8601 with timezone",
+      "example": "2024-01-15T10:30:00Z"
+    },
+    "last_seen": {
+      "type": "datetime", 
+      "description": "Last time the ad was shown or most recent activity",
+      "required": false,
+      "format": "ISO 8601 with timezone",
+      "example": "2024-02-15T18:45:30Z"
+    },
+    "ad_text": {
+      "type": "character",
+      "description": "Main text content/caption/body of the advertisement",
+      "required": false,
+      "example": "Discover amazing deals on our latest products!"
+    },
+    "ad_creative_urls": {
+      "type": "list<character>",
+      "description": "URLs linked in the advertisement (click destinations)",
+      "required": false,
+      "example": ["https://example.com/product", "https://signup.example.com"]
+    },
+    "ad_library_url": {
+      "type": "character", 
+      "description": "Direct link to this ad in the platform's ad library",
+      "required": false,
+      "example": "https://www.facebook.com/ads/library/?id=123456789"
+    },
+    "media_type": {
+      "type": "character",
+      "description": "Type of creative media used",
+      "required": false,
+      "allowed_values": ["image", "video", "multi", "text", "carousel", "unknown"],
+      "example": "image"
+    },
+    "media_urls": {
+      "type": "list<character>",
+      "description": "URLs to creative assets or ad preview pages",
+      "required": false,
+      "example": ["https://example.com/ad-preview", "https://cdn.example.com/image.jpg"]
+    },
+    "landing_url": {
+      "type": "character",
+      "description": "Final destination URL when ad is clicked",
+      "required": false,
+      "example": "https://example.com/product-page"
+    },
+    "countries": {
+      "type": "list<character>",
+      "description": "ISO 3166-1 alpha-2 country codes where ad was shown",
+      "required": false,
+      "example": ["US", "CA", "GB"]
+    },
+    "languages": {
+      "type": "list<character>",
+      "description": "ISO 639-1 language codes for ad content",
+      "required": false,
+      "example": ["en", "es", "fr"]
+    },
+    "spend_range": {
+      "type": "character",
+      "description": "Spending range as string when exact amounts not available",
+      "required": false,
+      "example": "$1,000 - $5,000"
+    },
+    "impressions_range": {
+      "type": "character", 
+      "description": "Impression count range as string when exact counts not available",
+      "required": false,
+      "example": "100,000 - 500,000"
+    },
+    "eu_reach": {
+      "type": "mixed",
+      "description": "EU-specific reach data (numeric or range string)",
+      "required": false,
+      "example": "250000"
+    },
+    "targeting_age": {
+      "type": "list<mixed>",
+      "description": "Age brackets or ranges used in targeting",
+      "required": false,
+      "example": ["18-24", "25-34", "35-44"]
+    },
+    "targeting_gender": {
+      "type": "list<character>",
+      "description": "Gender targeting options",
+      "required": false,
+      "allowed_values": ["male", "female", "all", "unknown"],
+      "example": ["all"]
+    },
+    "targeting_locations": {
+      "type": "list<character>",
+      "description": "Geographic targeting (countries, regions, cities)",
+      "required": false,
+      "example": ["US", "CA", "London"]
+    },
+    "targeting_interests": {
+      "type": "list<character>",
+      "description": "Interest-based targeting criteria",
+      "required": false,
+      "example": ["Technology", "Finance", "Travel"]
+    },
+    "targeting_behaviors": {
+      "type": "list<character>",
+      "description": "Behavioral targeting criteria",
+      "required": false,
+      "example": ["Frequent travelers", "Online shoppers", "Mobile users"]
+    },
+    "targeting_custom_audiences": {
+      "type": "list<character>",
+      "description": "Custom audience lists used for targeting",
+      "required": false,
+      "example": ["Website visitors", "Email subscribers", "Lookalike audience"]
+    },
+    "targeting_exclusions": {
+      "type": "list<character>",
+      "description": "Audiences or criteria specifically excluded from targeting",
+      "required": false,
+      "example": ["Existing customers", "Age 65+"]
+    },
+    "extra_json": {
+      "type": "list",
+      "description": "Raw platform-specific data preserved as list-column",
+      "required": true,
+      "example": "Platform-specific nested data"
+    },
+    "fetched_at": {
+      "type": "datetime",
+      "description": "Timestamp when data was retrieved (UTC)",
+      "required": true,
+      "format": "ISO 8601 with timezone",
+      "example": "2024-03-15T12:00:00Z"
+    }
+  },
+  "platform_mappings": {
+    "meta": {
+      "ad_id": "id",
+      "advertiser_id": "page_id", 
+      "advertiser_name": "page_name",
+      "first_seen": "ad_delivery_start_time",
+      "last_seen": "ad_delivery_stop_time",
+      "ad_text": "ad_creative_bodies",
+      "media_type": "media_type",
+      "media_urls": "ad_snapshot_url",
+      "spend_range": "spend",
+      "impressions_range": "impressions",
+      "eu_reach": "eu_total_reach",
+      "payer": "beneficiary_payers.payer",
+      "beneficiary": "beneficiary_payers.beneficiary",
+      "targeting_age": "target_ages",
+      "targeting_gender": "target_gender",
+      "targeting_locations": "target_locations",
+      "countries": "impressions_by_country"
+    },
+    "tiktok": {
+      "ad_id": "ad.id",
+      "advertiser_id": "advertiser.business_id",
+      "advertiser_name": "advertiser.business_name", 
+      "first_seen": "ad.first_shown_date",
+      "last_seen": "ad.last_shown_date",
+      "status": "ad.status",
+      "media_urls": ["ad.videos.url", "ad.image_urls"],
+      "impressions_range": "reach.unique_users_seen",
+      "targeting_age": "ad_group.targeting_info.age",
+      "targeting_gender": "ad_group.targeting_info.gender",
+      "targeting_locations": "ad_group.targeting_info.country"
+    },
+    "microsoft": {
+      "ad_id": "AdId",
+      "advertiser_id": "AdvertiserId", 
+      "advertiser_name": "AdvertiserName",
+      "first_seen": "AdDetails.StartDate",
+      "last_seen": "AdDetails.EndDate",
+      "impressions_range": "AdDetails.TotalImpressionsRange",
+      "countries": "ImpressionsByCountry.Country",
+      "targeting_other": "TargetTypes"
+    },
+    "apple": {
+      "ad_id": "adId",
+      "advertiser_id": "developerId",
+      "advertiser_name": "developerName",
+      "ad_text": ["shortDescription", "promotionalText"],
+      "media_urls": ["adAssets.pictureUrl", "adAssets.videoUrl"],
+      "countries": "countryOrRegion",
+      "first_seen": "firstImpressionDate",
+      "last_seen": "lastImpressionDate",
+      "targeting_age": "audienceRefinement.ageTarget",
+      "targeting_gender": "audienceRefinement.genderTarget",
+      "targeting_locations": "audienceRefinement.locationTarget"
+    },
+    "google": {
+      "ad_id": "ad_id",
+      "advertiser_id": "advertiser_id",
+      "advertiser_name": "advertiser_name",
+      "first_seen": "date_range_start", 
+      "last_seen": "date_range_end",
+      "ad_text": "ad_text",
+      "spend_range": "spend_range_min_usd",
+      "impressions_range": "impressions",
+      "countries": "country_code",
+      "targeting_age": "age_targeting",
+      "targeting_gender": "gender_targeting"
+    }
+  },
+  "validation_rules": {
+    "ad_id": {
+      "not_null": true,
+      "not_empty": true
+    },
+    "platform": {
+      "not_null": true,
+      "in_list": ["meta", "tiktok", "microsoft", "apple", "amazon", "google", "booking", "pinterest", "snapchat", "x"]
+    },
+    "fetched_at": {
+      "not_null": true,
+      "is_datetime": true
+    },
+    "first_seen": {
+      "is_datetime_or_null": true
+    },
+    "last_seen": {
+      "is_datetime_or_null": true
+    },
+    "countries": {
+      "iso_country_codes": true
+    },
+    "languages": {
+      "iso_language_codes": true
+    }
+  },
+  "notes": {
+    "list_columns": "Fields marked as list<type> are stored as list-columns in tibbles",
+    "datetime_format": "All datetime fields should be POSIXct in UTC timezone",
+    "missing_data": "Use NA for missing values, empty lists for empty list-columns",
+    "platform_specific": "Extra platform-specific fields preserved in extra_json column",
+    "field_availability": "Not all fields available on all platforms - see platform_mappings"
+  }
+}

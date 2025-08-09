@@ -1,0 +1,399 @@
+# adlibr Platform Registry
+# Configuration for all supported ad library platforms
+
+meta:
+  name: "Meta (Facebook & Instagram)"
+  base: "https://graph.facebook.com/{version}"
+  version: "v19.0"
+  endpoints:
+    search_ads: "ads_archive"
+    details: "ads_archive"
+    advertisers: null
+  params:
+    keyword: "search_terms"
+    advertisers: "page_ids"
+    countries: "ad_reached_countries"
+    date_from: "ad_delivery_date_min"
+    date_to: "ad_delivery_date_max"
+    types: "ad_type"
+    languages: "languages"
+    media: "media_type"
+    limit: "limit"
+    page_token: "after"
+    fields: "fields"
+  paging:
+    type: "cursor"
+    next_path: "paging.next"
+    cursor_param: "after"
+  auth: "bearer_graph_token"
+  env_vars:
+    - "META_TOKEN"
+  rate_limits:
+    requests_per_hour: 200
+    requests_per_day: 25000
+  notes: "EU/UK all-ads (1y); political/social global (7y). Requires identity verification for political data."
+  coverage:
+    geographic: ["EU", "UK", "Global (political)"]
+    temporal: "1 year (EU/UK), 7 years (political)"
+
+tiktok:
+  name: "TikTok Commercial Content Library"
+  base: "https://open.tiktokapis.com/v2/research/adlib"
+  version: "v2"
+  endpoints:
+    search_ads: "ad/query"
+    details: "ad/detail"
+    advertisers: "advertiser/query"
+  params:
+    keyword: "search_term"
+    advertisers: "advertiser_business_ids"
+    countries: "country_code"
+    date_from: "ad_published_date_range.min"
+    date_to: "ad_published_date_range.max"
+    types: null
+    languages: null
+    media: null
+    limit: "max_count"
+    page_token: "search_id"
+    fields: "fields"
+  paging:
+    type: "token"
+    next_param: "search_id"
+    has_more_field: "has_more"
+  auth: "oauth_client_credentials"
+  env_vars:
+    - "TIKTOK_CLIENT_ID"
+    - "TIKTOK_CLIENT_SECRET"
+    - "TIKTOK_ACCESS_TOKEN"
+  rate_limits:
+    requests_per_hour: 100
+    requests_per_day: 1000
+  notes: "EU data initially; globally available endpoints. OAuth client-credentials scope: research.adlib.basic"
+  coverage:
+    geographic: ["EU", "Global (expanding)"]
+    temporal: "Available ad history"
+
+microsoft:
+  name: "Microsoft (Bing) Ad Library"
+  base: "https://adlibrary.api.bingads.microsoft.com/api/v1"
+  version: "v1"
+  endpoints:
+    search_ads: "Ads"
+    details: "Ads/{AdId}"
+    advertisers: "Advertisers"
+  params:
+    keyword: "searchText"
+    advertisers: "advertiserId"
+    countries: "countryCodes"
+    date_from: "startDate"
+    date_to: "endDate"
+    types: null
+    languages: null
+    media: null
+    limit: "top"
+    page_token: "skip"
+    fields: null
+  paging:
+    type: "offset"
+    limit_param: "top"
+    offset_param: "skip"
+  auth: "optional_developer_token"
+  env_vars:
+    - "MS_DEV_TOKEN"
+    - "MS_AUTH_TOKEN"
+  rate_limits:
+    requests_per_hour: 100
+    requests_per_day: 1000
+  notes: "Public access with limits; higher quotas with DeveloperToken. EU/EEA focus."
+  coverage:
+    geographic: ["EU", "EEA"]
+    temporal: "Available ad history"
+
+apple:
+  name: "Apple App Store Ad Repository"
+  base: "https://adrepository.apple.com/api/v1"
+  version: "v1"
+  endpoints:
+    search_ads: "ad-repository-ads"
+    details: "ad-repository-ads"
+    advertisers: "ad-repository-entities"
+  params:
+    keyword: null
+    advertisers: "id"
+    countries: "countryOrRegion"
+    date_from: null
+    date_to: null
+    types: "type"
+    languages: null
+    media: null
+    limit: "limit"
+    page_token: "offset"
+    fields: null
+  paging:
+    type: "offset"
+    limit_param: "limit"
+    offset_param: "offset"
+  auth: "public_https"
+  env_vars: []
+  rate_limits:
+    requests_per_hour: 60
+    requests_per_day: 1000
+  notes: "Public HTTPS; no Accept: */*; date presets: LAST_90_DAYS, LAST_180_DAYS, LAST_YEAR"
+  coverage:
+    geographic: ["Global"]
+    temporal: "90 days, 180 days, 1 year presets"
+
+amazon:
+  name: "Amazon Store Ad Library (EU)"
+  base: "https://advertising-api-eu.amazon.com"
+  version: "v1"
+  endpoints:
+    search_ads: "adlib/search"
+    details: "adlib/ads/{adId}"
+    advertisers: "adlib/advertisers"
+  params:
+    keyword: "search_term"
+    advertisers: "advertiser_id"
+    countries: "country_codes"
+    date_from: "start_date"
+    date_to: "end_date"
+    types: "ad_type"
+    languages: "languages"
+    media: "media_type"
+    limit: "limit"
+    page_token: "next_token"
+    fields: "fields"
+  paging:
+    type: "token"
+    next_param: "next_token"
+  auth: "oauth_amazon_ads"
+  env_vars:
+    - "AMZN_CLIENT_ID"
+    - "AMZN_CLIENT_SECRET"
+    - "AMZN_REFRESH_TOKEN"
+  rate_limits:
+    requests_per_hour: 100
+    requests_per_day: 1000
+  notes: "Requires Amazon Ads onboarding; EU region. Parameters estimated pending full documentation."
+  coverage:
+    geographic: ["EU"]
+    temporal: "TBD"
+
+google:
+  name: "Google Ads Transparency (BigQuery)"
+  base: "bigquery"
+  version: "v1"
+  endpoints:
+    search_ads: "query"
+    details: "query"
+    advertisers: "query"
+  datasets:
+    political_ads: "bigquery-public-data.google_political_ads"
+    transparency: "bigquery-public-data.google_ads_transparency_center"
+  params:
+    keyword: "creative_text_filter"
+    advertisers: "advertiser_name"
+    countries: "country_code"
+    date_from: "date_range_start"
+    date_to: "date_range_end"
+    types: "ad_type"
+    languages: "language"
+    media: "creative_format"
+    limit: "LIMIT"
+    page_token: "OFFSET"
+    fields: "SELECT"
+  paging:
+    type: "sql_offset"
+    limit_clause: "LIMIT"
+    offset_clause: "OFFSET"
+  auth: "gcp_service_account"
+  env_vars:
+    - "GOOGLE_APPLICATION_CREDENTIALS"
+  rate_limits:
+    requests_per_hour: 100
+    requests_per_day: 1000
+  notes: "BigQuery datasets for political ads and transparency center. Billable queries (free tier available)."
+  coverage:
+    geographic: ["Global (political)", "Various (transparency)"]
+    temporal: "Historical political ad data"
+
+booking:
+  name: "Booking.com Ads Repository"
+  base: "https://ads-repository-api.booking.com"
+  version: "v1"
+  endpoints:
+    search_ads: "graphql"
+    details: "graphql"
+    advertisers: "graphql"
+  params:
+    keyword: "searchText"
+    advertisers: "advertiserName"
+    countries: "countryCode"
+    date_from: "dateFrom"
+    date_to: "dateTo"
+    types: "adType"
+    languages: "language"
+    media: "mediaType"
+    limit: "limit"
+    page_token: "offset"
+    fields: "fields"
+  paging:
+    type: "offset"
+    limit_param: "limit"
+    offset_param: "offset"
+  auth: "graphql_public"
+  env_vars: []
+  rate_limits:
+    requests_per_hour: 50
+    requests_per_day: 500
+  notes: "GraphQL endpoint; limited filtering; experimental/unstable. No date/country filtering reported."
+  coverage:
+    geographic: ["EU (DSA compliance)"]
+    temporal: "TBD"
+
+pinterest:
+  name: "Pinterest Ads Repository"
+  base: "https://ads-repository.pinterest.com/api/v1"
+  version: "v1"
+  endpoints:
+    search_ads: "ads"
+    details: "ads/{adId}"
+    advertisers: "advertisers"
+  params:
+    keyword: "search_term"
+    advertisers: "advertiser_id"
+    countries: "country_codes"
+    date_from: "start_date"
+    date_to: "end_date"
+    types: "ad_type"
+    languages: "languages"
+    media: "media_type"
+    limit: "limit"
+    page_token: "next_token"
+    fields: "fields"
+  paging:
+    type: "token"
+    next_param: "next_token"
+  auth: "api_key"
+  env_vars:
+    - "PINTEREST_API_KEY"
+  rate_limits:
+    requests_per_hour: 60
+    requests_per_day: 1000
+  notes: "Placeholder - no official public API documented yet. DSA compliance mentions repository."
+  coverage:
+    geographic: ["EU (DSA compliance)"]
+    temporal: "TBD"
+
+snapchat:
+  name: "Snapchat Ads Library"
+  base: "https://adsapi.snapchat.com/v1/ads_library"
+  version: "v1"
+  endpoints:
+    search_ads: "ads/search"
+    details: "ads/{ad_id}"
+    advertisers: null
+  params:
+    keyword: null
+    advertisers: "paying_advertiser_name"
+    countries: "countries"
+    date_from: "start_date"
+    date_to: "end_date"
+    types: null
+    languages: null
+    media: null
+    limit: null
+    page_token: "cursor"
+    fields: null
+  paging:
+    type: "cursor"
+    cursor_param: "cursor"
+    max_per_page: 50
+  auth: "public"
+  env_vars: []
+  rate_limits:
+    requests_per_hour: 5
+    requests_per_day: 20
+    strict_enforcement: true
+  notes: "Public API - no authentication required. VERY strict rate limits (5/hour, 20/day estimated). Supports ad search by advertiser, country, date range. First call usually succeeds, then rate limited quickly."
+  coverage:
+    geographic: ["EU countries: de,be,fi,pt,bg,dk,lt,lu,hr,lv,fr,hu,se,si,sk,ie,ee,el,mt,it,es,at,cy,cz,pl,ro,nl"]
+    temporal: "User-specified date ranges"
+
+x:
+  name: "X (Twitter) Ads Repository"
+  base: "https://ads-transparency.x.com/api/v1"
+  version: "v1"
+  endpoints:
+    search_ads: "ads"
+    details: "ads/{adId}"
+    advertisers: "advertisers"
+  params:
+    keyword: "search_term"
+    advertisers: "advertiser_id"
+    countries: "country_codes"
+    date_from: "start_date"
+    date_to: "end_date"
+    types: "ad_type"
+    languages: "languages"
+    media: "media_type"
+    limit: "limit"
+    page_token: "next_token"
+    fields: "fields"
+  paging:
+    type: "token"
+    next_param: "next_token"
+  auth: "bearer_token"
+  env_vars:
+    - "X_BEARER_TOKEN"
+  rate_limits:
+    requests_per_hour: 50
+    requests_per_day: 500
+  notes: "Placeholder - DSA non-compliance findings suggest insufficient API access. Exclude from implementation."
+  coverage:
+    geographic: ["Limited/Non-compliant"]
+    temporal: "TBD"
+
+# Global configuration
+global:
+  default_limit: 100
+  max_limit: 1000
+  default_timeout: 30
+  max_retries: 3
+  backoff_factor: 2
+  cache_ttl: 300
+  user_agent: "adlibr/{version} (+https://github.com/favstats/adlibr)"
+
+linkedin:
+  name: "LinkedIn Ad Library"
+  base: "https://api.linkedin.com/rest/adLibrary"
+  version: "202405"
+  endpoints:
+    search_ads: ""
+    details: null
+    advertisers: "advertisers"
+  params:
+    keyword: "keyword"
+    advertisers: "advertiser"
+    countries: "countries"
+    date_from: "start_date"
+    date_to: "end_date"
+    limit: "count"
+    page_token: "start"
+  paging:
+    type: "offset"
+    start_param: "start"
+    count_param: "count"
+    max_per_page: 25
+  auth: "oauth2_bearer"
+  env_vars:
+    - "LINKEDIN_CLIENT_ID"
+    - "LINKEDIN_CLIENT_SECRET"
+    - "LINKEDIN_TOKEN"
+  rate_limits:
+    requests_per_minute: 60
+    requests_per_hour: 600
+  notes: "LinkedIn Ad Library provides transparency into ads on the platform."
+  coverage:
+    geographic: ["Global"]
+    temporal: "Variable"

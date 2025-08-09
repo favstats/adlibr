@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(liads)
+library(adlibr)
 
-test_check("liads")
+test_check("adlibr")

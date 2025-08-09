@@ -1,3 +1,19 @@
 .Rproj.user
 .httr-oauth
 .Renviron
+
+# Security - never commit credentials
+*.env
+.env*
+*_token
+*_secret
+*_key
+*credentials*
+.secrets/
+auth/
+tokens/
+
+# R history and temp files
+.Rhistory
+.RData
+.Ruserdata
