@@ -1,0 +1,8 @@
+pandoc: 3.6.2
+pkgdown: 2.1.1
+pkgdown_sha: ~
+articles: {}
+last_built: 2025-08-09T12:28Z
+urls:
+  reference: https://favstats.github.io/liads/reference
+  article: https://favstats.github.io/liads/articles

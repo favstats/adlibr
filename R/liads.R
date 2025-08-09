@@ -114,6 +114,13 @@ build_daterange_param <- function(start_date, end_date) {
 #'   Should not normally need to be changed.
 #' @param verbose Logical. If TRUE, provides detailed progress output during execution.
 #'   Defaults to TRUE.
+#' @param clean Logical. If TRUE, returns a simplified dataset without list-columns.
+#'   Targeting and impression data are unnested and joined to the main data.
+#'   Defaults to FALSE.
+#' @param direction Character. When clean=TRUE, specifies output format:
+#'   "wide" (default) keeps separate rows for each targeting/impression combination,
+#'   "long" creates a longer format with one row per targeting facet or impression country.
+#'   Only used when clean=TRUE. Defaults to "wide".
 #'
 #' @return A `tibble` containing the ad data with the following columns:
 #'   \describe{
@@ -153,6 +160,7 @@ build_daterange_param <- function(start_date, end_date) {
 #' @importFrom usethis ui_done ui_oops ui_info
 #' @importFrom lubridate as_date day month year
 #' @importFrom urltools url_encode
+#' @importFrom tidyr unnest
 #'
 #' @examples
 #' \dontrun{
@@ -185,7 +193,17 @@ li_query <- function(keyword = NULL,
                               count = 25,
                               max_pages = Inf,
                               linkedin_api_version = "202409",
-                              verbose = TRUE) {
+                              verbose = TRUE,
+                              clean = FALSE,
+                              direction = "wide") {
+
+  # Parameter validation
+  if (!is.logical(clean)) {
+    stop("Parameter 'clean' must be TRUE or FALSE")
+  }
+  if (!direction %in% c("wide", "long")) {
+    stop("Parameter 'direction' must be 'wide' or 'long'")
+  }
 
   # Handle edge case where max_pages is 0
   if (max_pages <= 0) {
@@ -398,5 +416,159 @@ li_query <- function(keyword = NULL,
 
   if (verbose) usethis::ui_done("Total ads retrieved: {nrow(final_df)}")
 
+  # Apply cleaning if requested
+  if (clean) {
+    final_df <- clean_liads_data(final_df, direction = direction)
+  }
+
   return(final_df)
+}
+
+#==============================================================================#
+# 4. Data Cleaning Helper Function
+#==============================================================================#
+
+#' Clean LinkedIn Ads Data by Unnesting List Columns
+#'
+#' This internal function takes the raw LinkedIn ads data and creates a cleaned
+#' version without list-columns by unnesting targeting and impression data.
+#'
+#' @param data A tibble from li_query() with list-columns
+#' @param direction Character. "wide" or "long" format for the output
+#' @return A cleaned tibble without list-columns
+#' @keywords internal
+clean_liads_data <- function(data, direction = "wide") {
+  if (nrow(data) == 0) {
+    return(data)
+  }
+  
+  # Base columns (non-list columns)
+  base_cols <- c("ad_url", "is_restricted", "restriction_details", 
+                 "advertiser_name", "advertiser_url", "ad_payer", "ad_type",
+                 "first_impression_at", "latest_impression_at", 
+                 "total_impressions_from", "total_impressions_to")
+  
+  base_data <- data[, base_cols]
+  
+  # Unnest targeting data
+  targeting_data <- tryCatch({
+    data |>
+      dplyr::select(ad_url, ad_targeting) |>
+      tidyr::unnest(ad_targeting) |>
+      dplyr::filter(dplyr::if_any(dplyr::everything(), ~ !is.na(.x) & .x != ""))
+  }, error = function(e) {
+    # Return empty tibble with expected structure if unnesting fails
+    tibble::tibble(
+      ad_url = character(0),
+      facet_name = character(0),
+      is_included = logical(0),
+      included_segments = list(),
+      is_excluded = logical(0),
+      excluded_segments = list()
+    )
+  })
+  
+  # Unnest impression data
+  impression_data <- tryCatch({
+    data |>
+      dplyr::select(ad_url, impressions_by_country) |>
+      tidyr::unnest(impressions_by_country) |>
+      dplyr::filter(!is.na(country), !is.na(impression_percentage))
+  }, error = function(e) {
+    # Return empty tibble with expected structure if unnesting fails
+    tibble::tibble(
+      ad_url = character(0),
+      country = character(0),
+      impression_percentage = numeric(0)
+    )
+  })
+  
+  if (direction == "wide") {
+    # Wide format: create separate targeting and impression datasets
+    # Join base data with targeting data
+    if (nrow(targeting_data) > 0) {
+      # Flatten included_segments and excluded_segments into text
+      targeting_clean <- targeting_data |>
+        dplyr::mutate(
+          included_segments_text = purrr::map_chr(included_segments, ~ paste(.x, collapse = ", ")),
+          excluded_segments_text = purrr::map_chr(excluded_segments, ~ paste(.x, collapse = ", "))
+        ) |>
+        dplyr::select(-included_segments, -excluded_segments)
+      
+      result_targeting <- base_data |>
+        dplyr::left_join(targeting_clean, by = "ad_url")
+    } else {
+      result_targeting <- base_data
+    }
+    
+    # Join with impression data
+    if (nrow(impression_data) > 0) {
+      result_final <- result_targeting |>
+        dplyr::left_join(impression_data, by = "ad_url")
+    } else {
+      result_final <- result_targeting
+    }
+    
+    return(result_final)
+    
+  } else { # direction == "long"
+    # Long format: stack targeting and impression data
+    # Add type indicator and standardize column names
+    
+    targeting_long <- if (nrow(targeting_data) > 0) {
+      targeting_data |>
+        dplyr::mutate(
+          data_type = "targeting",
+          category = facet_name,
+          value = purrr::map_chr(included_segments, ~ paste(.x, collapse = ", ")),
+          is_included = is_included,
+          is_excluded = is_excluded
+        ) |>
+        dplyr::select(ad_url, data_type, category, value, is_included, is_excluded)
+    } else {
+      tibble::tibble(
+        ad_url = character(0),
+        data_type = character(0),
+        category = character(0),
+        value = character(0),
+        is_included = logical(0),
+        is_excluded = logical(0)
+      )
+    }
+    
+    impression_long <- if (nrow(impression_data) > 0) {
+      impression_data |>
+        dplyr::mutate(
+          data_type = "impression",
+          category = "country",
+          value = country,
+          percentage = impression_percentage,
+          is_included = NA,
+          is_excluded = NA
+        ) |>
+        dplyr::select(ad_url, data_type, category, value, percentage, is_included, is_excluded)
+    } else {
+      tibble::tibble(
+        ad_url = character(0),
+        data_type = character(0),
+        category = character(0),
+        value = character(0),
+        percentage = numeric(0),
+        is_included = logical(0),
+        is_excluded = logical(0)
+      )
+    }
+    
+    # Combine and join with base data
+    long_data <- dplyr::bind_rows(targeting_long, impression_long)
+    
+    if (nrow(long_data) > 0) {
+      result_final <- base_data |>
+        dplyr::left_join(long_data, by = "ad_url")
+    } else {
+      result_final <- base_data
+    }
+    
+    return(result_final)
+  }
 }

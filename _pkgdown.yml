@@ -1,0 +1,45 @@
+url: https://favstats.github.io/liads/
+template:
+  bootstrap: 5
+
+home:
+  title: "liads • LinkedIn Ad Library API Client"
+  description: "A comprehensive R client for the LinkedIn Ad Library API with OAuth 2.0 authentication, automatic pagination, and robust data processing."
+  
+navbar:
+  title: "liads"
+  left:
+    - text: "Get Started"
+      href: index.html
+    - text: "Reference"
+      href: reference/index.html
+    - text: "News"
+      href: news/index.html
+  right:
+    - icon: fab fa-github
+      href: https://github.com/favstats/liads
+
+reference:
+  - title: "Authentication"
+    desc: "Functions for setting up OAuth 2.0 authentication"
+    contents:
+      - li_auth_configure
+      - li_auth
+      - li_get_token
+  
+  - title: "Main Functions"
+    desc: "Core functions for querying the LinkedIn Ad Library"
+    contents:
+      - li_query
+  
+  - title: "Helper Functions"
+    desc: "Internal helper functions for data processing"
+    contents:
+      - build_countries_param
+      - build_daterange_param
+      - clean_liads_data
+
+authors:
+  Fabio Votta:
+    href: "https://github.com/favstats"
+    html: "<img src='https://github.com/favstats.png' height=24> Fabio Votta"

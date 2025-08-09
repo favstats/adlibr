@@ -13,7 +13,9 @@ li_query(
   count = 25,
   max_pages = Inf,
   linkedin_api_version = "202409",
-  verbose = TRUE
+  verbose = TRUE,
+  clean = FALSE,
+  direction = "wide"
 )
 }
 \arguments{
@@ -42,6 +44,15 @@ Should not normally need to be changed.}
 
 \item{verbose}{Logical. If TRUE, provides detailed progress output during execution.
 Defaults to TRUE.}
+
+\item{clean}{Logical. If TRUE, returns a simplified dataset without list-columns.
+Targeting and impression data are unnested and joined to the main data.
+Defaults to FALSE.}
+
+\item{direction}{Character. When clean=TRUE, specifies output format:
+"wide" (default) keeps separate rows for each targeting/impression combination,
+"long" creates a longer format with one row per targeting facet or impression country.
+Only used when clean=TRUE. Defaults to "wide".}
 }
 \value{
 A \code{tibble} containing the ad data with the following columns:
