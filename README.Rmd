@@ -10,7 +10,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.path = "man/figures/README-",
   out.width = "100%",
-  eval = T
+  eval = FALSE
 )
 ```
 
@@ -21,6 +21,8 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![R-CMD-check](https://github.com/favstats/adlibr/workflows/R-CMD-check/badge.svg)](https://github.com/favstats/adlibr/actions)
 <!-- badges: end -->
+
+> ⚠️ **WORK IN PROGRESS**: This package is currently under heavy development and barely works. Many features are incomplete, APIs may change, and functionality is limited. Use at your own risk and expect breaking changes.
 
 **adlibr** is a unified R client for accessing ad library APIs across major digital platforms. It provides a consistent interface for retrieving, analyzing, and comparing advertising data from Meta (Facebook/Instagram), TikTok, Microsoft (Bing), Apple App Store, Google (BigQuery datasets), and other platforms supporting ad transparency initiatives.
 
@@ -38,11 +40,11 @@ knitr::opts_chunk$set(
 
 | Platform | Status | Authentication | Coverage |
 |----------|--------|----------------|----------|
-| **Meta** (Facebook/Instagram) | ✅ Ready | Graph API Token | Global (political), EU/UK (all ads) |
-| **TikTok** | ✅ Ready | OAuth 2.0 | EU, expanding globally |
-| **Microsoft** (Bing) | ✅ Ready | Optional API Key | EU/EEA |
-| **Apple** App Store | ✅ Ready | Public API | Global |
-| **Google** (BigQuery) | ✅ Ready | GCP Service Account | Political ads |
+| **Meta** (Facebook/Instagram) | 🔧 In Development| Graph API Token | Global (political), EU/UK (all ads) |
+| **TikTok** | 🔧 In Development| OAuth 2.0 | EU, expanding globally |
+| **Microsoft** (Bing) | 🔧 In Development| Optional API Key | EU/EEA |
+| **Apple** App Store | 🔧 In Development| Public API | Global |
+| **Google** (BigQuery) | 🔧 In Development| GCP Service Account | Political ads |
 | **Amazon** | 🔧 In Development | OAuth 2.0 | EU |
 | **Pinterest** | 📋 Planned | API Key | EU (DSA) |
 | **Snapchat** | 📋 Planned | API Key | EU, Global (political) |
@@ -76,7 +78,7 @@ adlibr_auth_setup(c("meta", "tiktok"))
 adlibr_auth_status()
 ```
 
-```{r, eval = T, include = FALSE}
+```{r, eval = FALSE, include = FALSE}
 devtools::load_all()
 library(dplyr)
 library(tidyr)
@@ -109,7 +111,7 @@ election_ads %>%
 
 ### 4. Advertiser and Detailed Searches
 
-```{r advertiser-search}
+```{r advertiser-search2}
 # Find advertisers on TikTok
 tiktok_advertisers <- adlibr_advertisers("tiktok", q = "tech company")
 

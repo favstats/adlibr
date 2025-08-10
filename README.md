@@ -1,162 +1,154 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# liads
+# adlibr <img src="man/figures/logo.png" align="right" width="120"/>
 
 <!-- badges: start -->
 
 [![CRAN
-status](https://www.r-pkg.org/badges/version/liads)](https://CRAN.R-project.org/package=liads)
+status](https://www.r-pkg.org/badges/version/adlibr)](https://CRAN.R-project.org/package=adlibr)
 [![Lifecycle:
-stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![R-CMD-check](https://github.com/favstats/adlibr/workflows/R-CMD-check/badge.svg)](https://github.com/favstats/adlibr/actions)
 <!-- badges: end -->
 
-**liads** is a comprehensive R client for the [LinkedIn Ad Library
-API](https://www.linkedin.com/ad-library/api/ads). It provides tools for
-OAuth 2.0 authentication, querying ads by various criteria, automatic
-pagination, and robust data processing.
+> ⚠️ **WORK IN PROGRESS**: This package is currently under heavy
+> development and barely works. Many features are incomplete, APIs may
+> change, and functionality is limited. Use at your own risk and expect
+> breaking changes.
+
+**adlibr** is a unified R client for accessing ad library APIs across
+major digital platforms. It provides a consistent interface for
+retrieving, analyzing, and comparing advertising data from Meta
+(Facebook/Instagram), TikTok, Microsoft (Bing), Apple App Store, Google
+(BigQuery datasets), and other platforms supporting ad transparency
+initiatives.
+
+## Features
+
+- **🔀 Unified Interface**: Single API for multiple ad library platforms
+- **🔐 Secure Authentication**: OAuth 2.0, API keys, and secure
+  credential storage
+- **📊 Data Normalization**: Common schema across all platforms for easy
+  comparison
+- **⚡ Automatic Pagination**: Handles platform-specific pagination
+  automatically
+- **🛡️ Rate Limiting**: Built-in retry logic with exponential backoff
+- **🎯 Flexible Filtering**: Search by keywords, advertisers, countries,
+  dates, and more
+- **📈 Rich Metadata**: Targeting criteria, spend ranges, impressions,
+  and creative assets
+
+## Supported Platforms
+
+| Platform | Status | Authentication | Coverage |
+|----|----|----|----|
+| **Meta** (Facebook/Instagram) | 🔧 In Development | Graph API Token | Global (political), EU/UK (all ads) |
+| **TikTok** | 🔧 In Development | OAuth 2.0 | EU, expanding globally |
+| **Microsoft** (Bing) | 🔧 In Development | Optional API Key | EU/EEA |
+| **Apple** App Store | 🔧 In Development | Public API | Global |
+| **Google** (BigQuery) | 🔧 In Development | GCP Service Account | Political ads |
+| **Amazon** | 🔧 In Development | OAuth 2.0 | EU |
+| **Pinterest** | 📋 Planned | API Key | EU (DSA) |
+| **Snapchat** | 📋 Planned | API Key | EU, Global (political) |
+| **X** (Twitter) | ⚠️ Limited | API Key | Limited compliance |
 
 ## Installation
 
-You can install the development version of liads from
-[GitHub](https://github.com/favstats/liads) with:
+You can install the development version of adlibr from
+[GitHub](https://github.com/favstats/adlibr) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("favstats/liads")
+devtools::install_github("favstats/adlibr")
 ```
 
 ## Quick Start
 
 ### 1. Authentication Setup
 
-First, set up your LinkedIn Developer App credentials (one-time setup):
+Configure credentials for the platforms you want to use:
 
 ``` r
-library(liads)
+library(adlibr)
 
-# Configure your LinkedIn app credentials
-li_auth_configure()  # You'll be prompted to enter Client ID and Secret
+# Interactive setup for all platforms
+adlibr_auth_setup()
 
-# Authenticate (opens browser for OAuth)
-li_auth()
+# Or setup specific platforms
+adlibr_auth_setup(c("meta", "tiktok"))
+
+# Check authentication status
+adlibr_auth_status()
 ```
 
 ### 2. Basic Usage
 
 ``` r
-# Simple keyword search
-marketing_ads <- li_query(
-  keyword = "marketing",
-  max_pages = 1
-)
-#> ℹ Retrieving page 1 (starting at index 0)...
-#> ✔ Retrieved 25 ads.
-#> ✔ Reached `max_pages` limit.
-#> ✔ Total ads retrieved: 25
+# Search Meta ads for climate change content
+meta_ads <- adlibr_search("meta", 
+                         q = "climate change",
+                         countries = c("US", "CA"),
+                         date_from = "2024-01-01",
+                         limit = 50)
 ```
 
-The most basic search uses just a keyword. This returns raw data with
-list-columns for detailed analysis:
+### 3. Cross-Platform Searching
 
 ``` r
-marketing_ads
-#> # A tibble: 25 × 13
-#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
-#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
-#>  1 https://www… FALSE         <NA>                LinearB         https://www.l…
-#>  2 https://www… FALSE         <NA>                Julie Yingst    https://www.l…
-#>  3 https://www… FALSE         <NA>                LinearB         https://www.l…
-#>  4 https://www… FALSE         <NA>                FORM Digital    https://www.l…
-#>  5 https://www… FALSE         <NA>                FinListics Sol… https://www.l…
-#>  6 https://www… FALSE         <NA>                Salesforce      https://www.l…
-#>  7 https://www… FALSE         <NA>                HENNGE (North … https://www.l…
-#>  8 https://www… FALSE         <NA>                LinearB         https://www.l…
-#>  9 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
-#> 10 https://www… FALSE         <NA>                Aeqium          https://www.l…
-#> # ℹ 15 more rows
-#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>,
-#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
-#> #   total_impressions_from <int>, total_impressions_to <int>,
-#> #   impressions_by_country <list>, ad_targeting <list>
+# Search across multiple platforms
+platforms <- c("meta", "tiktok", "microsoft")
+election_ads <- purrr::map_df(platforms, ~{
+  adlibr_search(.x, q = "election", countries = "US", limit = 10)
+})
+
+# Compare ad volumes by platform
+election_ads %>% 
+  count(platform, sort = TRUE)
 ```
 
-### Searching by Country
-
-For more targeted results, search within specific countries:
+### 4. Advertiser and Detailed Searches
 
 ``` r
-us_ads <- li_query(
-  countries = c("us"),
-  max_pages = 2,
-  count = 10
-)
-#> ℹ Retrieving page 1 (starting at index 0)...
-#> ✔ Retrieved 10 ads.
-#> ℹ Retrieving page 2 (starting at index 10)...
-#> ✔ Retrieved 10 ads.
-#> ✔ Reached `max_pages` limit.
-#> ✔ Total ads retrieved: 20
+# Find advertisers on TikTok
+tiktok_advertisers <- adlibr_advertisers("tiktok", q = "tech company")
 
-us_ads
-#> # A tibble: 20 × 13
-#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
-#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
-#>  1 https://www… FALSE         <NA>                Every           https://www.l…
-#>  2 https://www… FALSE         <NA>                Salesforce      https://www.l…
-#>  3 https://www… FALSE         <NA>                Box             https://www.l…
-#>  4 https://www… FALSE         <NA>                Michael Starkey https://www.l…
-#>  5 https://www… FALSE         <NA>                Commvault       https://www.l…
-#>  6 https://www… FALSE         <NA>                Sunbuds         https://www.l…
-#>  7 https://www… FALSE         <NA>                American Indus… https://www.l…
-#>  8 https://www… FALSE         <NA>                Zip             https://www.l…
-#>  9 https://www… FALSE         <NA>                American Indus… https://www.l…
-#> 10 https://www… FALSE         <NA>                American Indus… https://www.l…
-#> 11 https://www… FALSE         <NA>                Pharmefex Cons… https://www.l…
-#> 12 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
-#> 13 https://www… FALSE         <NA>                Seeds           https://www.l…
-#> 14 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
-#> 15 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
-#> 16 https://www… FALSE         <NA>                Splash (Splash… https://www.l…
-#> 17 https://www… FALSE         <NA>                La Donna Claude https://www.l…
-#> 18 https://www… FALSE         <NA>                Delve - AI for… https://www.l…
-#> 19 https://www… FALSE         <NA>                Precision Risk… https://www.l…
-#> 20 https://www… FALSE         <NA>                ISU Steadfast … https://www.l…
-#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>,
-#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
-#> #   total_impressions_from <int>, total_impressions_to <int>,
-#> #   impressions_by_country <list>, ad_targeting <list>
+# Get detailed information for specific ads
+ad_details <- adlibr_details("meta", c("ad_id_1", "ad_id_2"))
 ```
 
-## How Search Works
+## Unified Data Schema
 
-**Important**: LinkedIn’s Ad Library searches are based on the [official
-API documentation](https://www.linkedin.com/ad-library/api/ads):
+All platforms return data in a consistent format:
 
-- **Keywords**: Multiple keywords use **AND logic** - ALL keywords must
-  appear in the ad content
-- **Countries**: Only shows ads that were actually served in those
-  countries  
-- **Dates**: Filters by when ads were served (not when they were
-  created)
-- **Advertiser**: Searches company names that paid for the ads
+``` r
+# Common columns across all platforms:
+colnames(meta_ads)
+```
 
-## API Parameters
+Key fields include: - `ad_id`: Platform-specific identifier -
+`platform`: Source platform - `advertiser_name`: Organization name -
+`first_seen`/`last_seen`: Date ranges - `ad_text`: Advertisement
+content - `media_type` & `media_urls`: Creative assets - `countries`:
+Geographic targeting - `targeting_*`: Audience targeting criteria -
+`extra_json`: Raw platform-specific data
 
-The `li_query()` function supports all parameters from the LinkedIn Ad
-Library API:
+## Unified API Parameters
+
+All `adlibr_*` functions support consistent parameters across platforms:
 
 | Parameter | Type | Description | Example |
 |----|----|----|----|
-| `keyword` | String | Keywords to search in ad content (AND logic) | `"data science"` |
-| `advertiser` | String | Advertiser name to search | `"Microsoft"` |
-| `countries` | Character vector | 2-letter ISO country codes | `c("us", "gb", "de")` |
-| `start_date` | Date/String | Start date (inclusive) | `"2024-01-01"` |
-| `end_date` | Date/String | End date (exclusive) | `"2024-12-31"` |
-| `count` | Integer | Results per page (max 25) | `25` |
-| `max_pages` | Integer | Maximum pages to retrieve | `10` |
-| `clean` | Logical | Return simplified data without list-columns | `TRUE` |
-| `direction` | String | When clean=TRUE: “wide” or “long” format | `"wide"` |
+| `platform` | String | Platform to query | `"meta"`, `"tiktok"`, `"microsoft"` |
+| `q` | String | Keywords to search in ad content | `"climate change"` |
+| `advertisers` | Character vector | Advertiser names or IDs | `c("Microsoft", "Google")` |
+| `countries` | Character vector | ISO 3166-1 alpha-2 country codes | `c("US", "GB", "DE")` |
+| `date_from` | Date/String | Start date (YYYY-MM-DD) | `"2024-01-01"` |
+| `date_to` | Date/String | End date (YYYY-MM-DD) | `"2024-12-31"` |
+| `types` | Character vector | Platform-specific ad types | Platform dependent |
+| `languages` | Character vector | ISO 639-1 language codes | `c("en", "es", "fr")` |
+| `limit` | Integer | Results per page (max 1000) | `100` |
+| `page_token` | String | Pagination token for next page | From previous response |
 
 ## Data Structure
 
@@ -186,39 +178,15 @@ the ad content.
 
 ``` r
 # This searches for ads containing BOTH "artificial" AND "intelligence" AND "machine" AND "learning"
-tech_ads <- li_query(
-  keyword = "artificial intelligence machine learning",
+tech_ads <- adlibr_search("linkedin",
+  q = "artificial intelligence machine learning",
   countries = c("us", "gb"),
-  start_date = "2025-01-01", 
-  end_date = "2025-01-31",
-  max_pages = 2
+  date_from = "2025-01-01", 
+  date_to = "2025-01-31",
+  limit = 50
 )
-#> ℹ Retrieving page 1 (starting at index 0)...
-#> ✔ Retrieved 25 ads.
-#> ℹ Retrieving page 2 (starting at index 25)...
-#> ✔ Retrieved 25 ads.
-#> ✔ Reached `max_pages` limit.
-#> ✔ Total ads retrieved: 50
 
 tech_ads
-#> # A tibble: 50 × 13
-#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
-#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
-#>  1 https://www… FALSE         <NA>                OpenText        https://www.l…
-#>  2 https://www… FALSE         <NA>                Upwork          https://www.l…
-#>  3 https://www… FALSE         <NA>                Detekt Biomedi… https://www.l…
-#>  4 https://www… FALSE         <NA>                Web Summit      https://www.l…
-#>  5 https://www… FALSE         <NA>                OpenText        https://www.l…
-#>  6 https://www… FALSE         <NA>                Web Summit      https://www.l…
-#>  7 https://www… FALSE         <NA>                ServiceNow      https://www.l…
-#>  8 https://www… FALSE         <NA>                Web Summit      https://www.l…
-#>  9 https://www… FALSE         <NA>                Web Summit      https://www.l…
-#> 10 https://www… FALSE         <NA>                University of … https://www.l…
-#> # ℹ 40 more rows
-#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>,
-#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
-#> #   total_impressions_from <int>, total_impressions_to <int>,
-#> #   impressions_by_country <list>, ad_targeting <list>
 ```
 
 **Advertiser Search**: You can also search by the company/organization
@@ -226,35 +194,13 @@ that paid for the ads:
 
 ``` r
 # Find all ads paid for by companies with "Microsoft" in their name
-microsoft_ads <- li_query(
-  advertiser = "Microsoft",
+microsoft_ads <- adlibr_search("linkedin",
+  advertisers = "Microsoft",
   countries = c("us"),
-  max_pages = 1,
-  count = 10
+  limit = 10
 )
-#> ℹ Retrieving page 1 (starting at index 0)...
-#> ✔ Retrieved 10 ads.
-#> ✔ Reached `max_pages` limit.
-#> ✔ Total ads retrieved: 10
 
 microsoft_ads
-#> # A tibble: 10 × 13
-#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
-#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
-#>  1 https://www… FALSE         <NA>                Microsoft Azure https://www.l…
-#>  2 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#>  3 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#>  4 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#>  5 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#>  6 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#>  7 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#>  8 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#>  9 https://www… FALSE         <NA>                Microsoft 365   https://www.l…
-#> 10 https://www… FALSE         <NA>                Microsoft Azure https://www.l…
-#> # ℹ 8 more variables: ad_payer <chr>, ad_type <chr>, first_impression_at <lgl>,
-#> #   latest_impression_at <lgl>, total_impressions_from <int>,
-#> #   total_impressions_to <int>, impressions_by_country <list>,
-#> #   ad_targeting <list>
 ```
 
 ### Analyzing Targeting Data
@@ -274,22 +220,13 @@ targeting_data <- tech_ads |>
   dplyr::filter(!is.na(facet_name))
 
 print(paste("Found targeting data for", nrow(targeting_data), "targeting criteria"))
-#> [1] "Found targeting data for 33 targeting criteria"
 
 # Show the top targeting categories
 top_targeting <- targeting_data %>% 
   count(facet_name, sort = TRUE)
 
 print("Most common targeting approaches:")
-#> [1] "Most common targeting approaches:"
 head(top_targeting, 5)
-#> # A tibble: 4 × 2
-#>   facet_name     n
-#>   <chr>      <int>
-#> 1 Language      11
-#> 2 Location      11
-#> 3 Audience       7
-#> 4 Company        4
 ```
 
 ### Geographic Impression Analysis
@@ -317,16 +254,7 @@ top_countries <- impression_data %>%
   slice_head(n = 5)
 
 print("Top 5 countries by number of ads:")
-#> [1] "Top 5 countries by number of ads:"
 print(top_countries)
-#> # A tibble: 5 × 3
-#>   country           total_ads sum_impressions
-#>   <chr>                 <int>           <dbl>
-#> 1 urn:li:country:IN         8         436775.
-#> 2 urn:li:country:FR         9         189111.
-#> 3 urn:li:country:EG         4         140344.
-#> 4 urn:li:country:GB        10         124144.
-#> 5 urn:li:country:NL         8          84478.
 ```
 
 ``` r
@@ -352,8 +280,6 @@ impression_data %>%
   theme_minimal()
 ```
 
-<img src="man/figures/README-impression-analysis-1.png" width="100%" />
-
 ### Clean Data Format Options
 
 The `clean = TRUE` parameter simplifies the data structure for easier
@@ -361,36 +287,14 @@ analysis:
 
 ``` r
 # Wide format: countries become separate columns, targeting flattened
-clean_wide <- li_query(
+clean_wide <- adlibr_search("linkedin",
   countries = c("us"),
-  start_date = "2025-01-01", 
-  end_date = "2025-01-31",
-  clean = TRUE,
-  direction = "wide",
-  max_pages = 1,
-  count = 5
+  date_from = "2025-01-01", 
+  date_to = "2025-01-31",
+  limit = 5
 )
-#> ℹ Retrieving page 1 (starting at index 0)...
-#> ✔ Retrieved 5 ads.
-#> ✔ Reached `max_pages` limit.
-#> ✔ Total ads retrieved: 5
 
 clean_wide
-#> # A tibble: 5 × 178
-#>   ad_url        is_restricted restriction_details advertiser_name advertiser_url
-#>   <chr>         <lgl>         <chr>               <chr>           <chr>         
-#> 1 https://www.… FALSE         <NA>                Orca Security   https://www.l…
-#> 2 https://www.… FALSE         <NA>                KLOwen Ortho    https://www.l…
-#> 3 https://www.… FALSE         <NA>                Hashlock        https://www.l…
-#> 4 https://www.… FALSE         <NA>                Alkemi          https://www.l…
-#> 5 https://www.… FALSE         <NA>                Hashlock        https://www.l…
-#> # ℹ 173 more variables: ad_payer <chr>, ad_type <chr>,
-#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
-#> #   total_impressions_from <int>, total_impressions_to <int>,
-#> #   impressions_mid <dbl>, targeting_facets <chr>, targeting_segments <chr>,
-#> #   impression_pct_GQ <dbl>, impression_pct_NU <dbl>, impression_pct_WS <dbl>,
-#> #   impression_pct_AD <dbl>, impression_pct_AM <dbl>, impression_pct_AR <dbl>,
-#> #   impression_pct_BI <dbl>, impression_pct_BS <dbl>, …
 ```
 
 Notice the key improvements in wide format: - `impressions_mid`:
@@ -400,40 +304,14 @@ of targeting approaches - Country columns (when data available):
 
 ``` r
 # Long format: all targeting/impression data stacked with type indicators
-clean_long <- li_query(
+clean_long <- adlibr_search("linkedin",
   countries = c("fr"),
-  start_date = "2025-01-01", 
-  end_date = "2025-01-31",
-  clean = TRUE,
-  direction = "long",
-  max_pages = 1,
-  count = 5
+  date_from = "2025-01-01", 
+  date_to = "2025-01-31",
+  limit = 5
 )
-#> ℹ Retrieving page 1 (starting at index 0)...
-#> ✔ Retrieved 5 ads.
-#> ✔ Reached `max_pages` limit.
-#> ✔ Total ads retrieved: 5
 
 clean_long
-#> # A tibble: 347 × 18
-#>    ad_url       is_restricted restriction_details advertiser_name advertiser_url
-#>    <chr>        <lgl>         <chr>               <chr>           <chr>         
-#>  1 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  2 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  3 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  4 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  5 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  6 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  7 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  8 https://www… FALSE         <NA>                Codecov         https://www.l…
-#>  9 https://www… FALSE         <NA>                Codecov         https://www.l…
-#> 10 https://www… FALSE         <NA>                Codecov         https://www.l…
-#> # ℹ 337 more rows
-#> # ℹ 13 more variables: ad_payer <chr>, ad_type <chr>,
-#> #   first_impression_at <dttm>, latest_impression_at <dttm>,
-#> #   total_impressions_from <int>, total_impressions_to <int>,
-#> #   impressions_mid <dbl>, data_type <chr>, category <chr>, value <chr>,
-#> #   is_included <lgl>, is_excluded <lgl>, percentage <dbl>
 ```
 
 ## Data Format Options
@@ -447,20 +325,29 @@ clean_long
 ## Rate Limits and Best Practices
 
 - **Maximum 25 results per request** (API limitation)
+- **Daily rate limits** applied per application and per member
+- **Automatic retry handling**: 429 errors trigger exponential backoff
+  (2, 4, 8 seconds)
 - **Use pagination** for large datasets with `max_pages` parameter
 - **Specific searches** may return fewer results than broad searches
 - **Date ranges**: start is inclusive, end is exclusive
 - **Keywords**: Multiple keywords use AND logic
 - **Countries**: Use lowercase 2-letter ISO codes
 
+⚠️ **Rate Limiting Behavior**: If you exceed LinkedIn’s rate limits, the
+package automatically waits and retries up to 3 times with increasing
+delays. This ensures your queries succeed even during high-usage
+periods.
+
 ## Authentication Details
 
 The package uses OAuth 2.0 with automatic token caching:
 
-1.  **Setup**: `li_auth_configure()` stores app credentials in
-    `.Renviron`
-2.  **Authentication**: `li_auth()` opens browser for user consent
-3.  **Token Storage**: Tokens are cached in `.httr-oauth` for reuse
+1.  **Setup**: `adlibr_auth_setup()` guides you through credential
+    configuration  
+2.  **Authentication**: Opens browser for user consent when needed
+3.  **Token Storage**: Credentials are securely stored in environment
+    variables
 4.  **Automatic Refresh**: Tokens are automatically refreshed when
     needed
 
@@ -469,10 +356,73 @@ The package uses OAuth 2.0 with automatic token caching:
 Full API documentation is available at:
 <https://www.linkedin.com/ad-library/api/ads>
 
+## Advanced Usage
+
+### Bulk Data Collection
+
+``` r
+# Get all available data with automatic pagination
+all_election_ads <- adlibr_get_all("meta", "search_ads", 
+                                  list(q = "election", countries = "US"),
+                                  max_pages = 10, delay = 2)
+```
+
+### Platform-Specific Features
+
+``` r
+# Check what platforms are available
+adlibr_platforms()
+
+# Check authentication status
+adlibr_auth_status()
+
+# Platform-specific targeting analysis
+meta_targeting <- meta_ads %>%
+  filter(!map_lgl(targeting_age, is.null)) %>%
+  unnest(targeting_age)
+```
+
+## Research Applications
+
+**adlibr** is designed for researchers studying:
+
+- 📊 **Digital campaigning** across platforms
+- 🎯 **Advertising targeting** practices
+- 🌍 **Cross-platform content analysis**
+- 📈 **Ad spending transparency**
+- 🔍 **Disinformation research**
+- 📱 **Platform policy compliance**
+
+## Rate Limits & Best Practices
+
+- **Respect rate limits**: Each platform has different limits
+- **Use delays**: Add delays between requests for large datasets
+- **Cache responses**: Save results to avoid re-querying
+- **Batch efficiently**: Use appropriate `limit` parameters
+- **Monitor usage**: Check authentication status regularly
+
 ## Contributing
 
-Please report bugs and feature requests at:
-<https://github.com/favstats/liads/issues>
+We welcome contributions! Please see our [Contributing
+Guide](CONTRIBUTING.md) for details.
+
+- 🐛 **Bug reports**: <https://github.com/favstats/adlibr/issues>
+- 💡 **Feature requests**:
+  <https://github.com/favstats/adlibr/discussions>
+- 🔧 **Pull requests**: Welcome for bug fixes and new features
+
+## Citation
+
+If you use adlibr in your research, please cite:
+
+``` bibtex
+@software{adlibr,
+  title = {adlibr: Unified R Client for Ad Library APIs},
+  author = {Fabio Votta},
+  url = {https://github.com/favstats/adlibr},
+  year = {2024}
+}
+```
 
 ## License
 
